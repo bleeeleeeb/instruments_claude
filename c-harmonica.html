@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>C 다이아토닉 하모니카 음역 지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dfe3e7; --surface:#f3f5f7; --ink:#14181d; --muted:#5d6670; --line:#c4cad1;
+  --plate-a:#fbfcfd; --plate-b:#b9c0c8; --slot:#2a2f36; --slot-ink:#e8ecf0;
+  --blow:#2463d8; --draw:#d4462a; --db:#d98a12; --bb:#13968e; --ob:#7b45d0; --od:#c8307c;
+  --display:"Bricolage Grotesque", "IBM Plex Sans KR", system-ui, sans-serif;
+  --body:"IBM Plex Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181c; --surface:#1e2228; --ink:#eef1f4; --muted:#98a2ad; --line:#323840;
+    --plate-a:#8e97a1; --plate-b:#3a4149; --slot:#0d0f12; --slot-ink:#cfd6dd;
+    --blow:#6b9bff; --draw:#ff7a5c; --db:#f2b24a; --bb:#3fc9be; --ob:#a982ff; --od:#f06aa9;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --ink:#eef1f4; --muted:#98a2ad; --line:#323840;
+  --plate-a:#8e97a1; --plate-b:#3a4149; --slot:#0d0f12; --slot-ink:#cfd6dd;
+  --blow:#6b9bff; --draw:#ff7a5c; --db:#f2b24a; --bb:#3fc9be; --ob:#a982ff; --od:#f06aa9;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.55;-webkit-font-smoothing:antialiased}
+main{max-width:960px;margin:0 auto;padding:28px 18px 56px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(2rem,6vw,3.4rem);line-height:1;letter-spacing:-.03em;margin:0 0 10px}
+h1 small{display:block;font-size:.42em;font-weight:600;letter-spacing:-.01em;color:var(--muted);margin-top:10px}
+.lede{max-width:60ch;color:var(--muted);margin:0 0 22px}
+h2{font-family:var(--display);font-weight:600;font-size:1.25rem;letter-spacing:-.01em;margin:36px 0 10px}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.chip{--c:var(--muted);font:500 .85rem var(--body);display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1.5px solid var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--ink);cursor:pointer}
+.chip::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
+.chip[aria-pressed="false"]{opacity:.38;background:transparent}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;margin-left:auto}
+.seg button{font:500 .82rem var(--body);background:transparent;color:var(--muted);border:0;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--blow);outline-offset:2px}
+
+/* harmonica map */
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -18px;padding:6px 18px 12px}
+.map{display:grid;grid-template-columns:72px repeat(10,minmax(44px,1fr));gap:5px;min-width:560px;align-items:center}
+.rlabel{font-size:.74rem;color:var(--muted);line-height:1.25;padding-right:6px;position:sticky;left:0;background:var(--bg);z-index:2;align-self:stretch;display:flex;align-items:center}
+.cell{--c:var(--muted);height:46px;border-radius:9px;border:1.5px solid color-mix(in srgb,var(--c) 70%,transparent);background:color-mix(in srgb,var(--c) 13%,var(--surface));color:var(--ink);font-family:var(--display);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;transition:transform .12s, background .12s, opacity .2s}
+.cell .n{font-weight:800;font-size:1.02rem;line-height:1;color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.cell .o{font-size:.68rem;color:var(--muted);margin-top:3px;font-family:var(--body)}
+.cell.rare{border-style:dashed;background:transparent}
+.cell.base{height:54px}
+.cell.base .n{font-size:1.2rem}
+.cell:active{transform:scale(.94)}
+.cell.on{background:var(--c);border-color:var(--c)}
+.cell.on .n,.cell.on .o{color:#fff}
+.cell.hidden{opacity:.07;pointer-events:none}
+.empty{height:46px}
+
+.plate{grid-column:2 / -1;display:grid;grid-template-columns:repeat(10,1fr);gap:5px;padding:9px 8px;border-radius:14px;background:linear-gradient(180deg,var(--plate-a),var(--plate-b) 55%,var(--plate-a));box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 6px 18px -8px rgba(0,0,0,.35)}
+.slot{height:30px;border-radius:7px;background:var(--slot);color:var(--slot-ink);display:flex;align-items:center;justify-content:center;font:600 .9rem var(--display);box-shadow:inset 0 3px 6px rgba(0,0,0,.6)}
+.plabel{font-family:var(--display);font-weight:600;font-size:.8rem;color:var(--ink);position:sticky;left:0;background:var(--bg);z-index:2;align-self:stretch;display:flex;align-items:center}
+.side{font-size:.72rem;color:var(--muted);grid-column:2/-1;padding:2px 2px 0}
+
+/* detail */
+.detail{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;display:grid;grid-template-columns:auto 1fr;gap:6px 18px;align-items:start;min-height:120px}
+.big{font-family:var(--display);font-weight:800;font-size:3.4rem;line-height:.95;letter-spacing:-.04em;grid-row:span 3}
+.big sub{font-size:.38em;font-weight:600;letter-spacing:0;color:var(--muted);vertical-align:baseline;margin-left:2px}
+.dtitle{font-weight:600;font-size:1rem}
+.dmeta{font-size:.85rem;color:var(--muted)}
+.ddesc{font-size:.9rem;max-width:62ch}
+.where{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{--c:var(--muted);font-size:.78rem;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--c) 16%,transparent);color:color-mix(in srgb,var(--c) 80%,var(--ink));border:1px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.hint{color:var(--muted);font-size:.9rem;grid-column:1/-1}
+
+/* keyboard */
+.kbwrap{overflow-x:auto;margin:0 -18px;padding:4px 18px 8px}
+.kb{position:relative;height:150px;min-width:620px;display:flex}
+.wk{flex:1;position:relative;border:1px solid var(--line);border-right:0;background:var(--surface);border-radius:0 0 7px 7px;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:6px;gap:3px}
+.wk:last-child{border-right:1px solid var(--line)}
+.bk{position:absolute;top:0;height:92px;background:#22272d;border-radius:0 0 6px 6px;z-index:2;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:5px;gap:3px;border:0}
+.dots{display:flex;flex-direction:column;gap:2px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%}
+.klbl{font:600 .62rem var(--display);color:var(--muted)}
+.bk .klbl{color:#aab3bd}
+.wk.sel{background:color-mix(in srgb,var(--blow) 18%,var(--surface))}
+.bk.sel{background:color-mix(in srgb,var(--blow) 55%,#22272d)}
+.wk.out{opacity:.35;pointer-events:none}
+.kbnote{font-size:.85rem;color:var(--muted);margin:8px 0 0;max-width:62ch}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px 22px;margin-top:6px}
+.legend div{border-left:3px solid var(--c);padding:2px 0 2px 12px}
+.legend b{display:block;font-family:var(--display);font-weight:600;font-size:1rem}
+.legend p{margin:3px 0 0;font-size:.86rem;color:var(--muted)}
+footer{margin-top:36px;font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.cell{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>C 하모니카 음역 지도<small>10홀 다이아토닉 · 리히터 튜닝</small></h1>
+  <p class="lede">칸을 누르면 소리가 나고, 벤딩은 원래 음에서 미끄러져 내려가는 소리로 들려줍니다. 위쪽은 불어서, 아래쪽은 들이마셔서 내는 음이에요.</p>
+
+  <div class="controls" id="filters"></div>
+  <div class="controls">
+    <div class="seg" id="nameSeg" role="group" aria-label="음 이름 표기">
+      <button data-v="letter" aria-pressed="true">C D E</button>
+      <button data-v="sol" aria-pressed="false">도 레 미</button>
+    </div>
+    <div class="seg" id="accSeg" role="group" aria-label="임시표" style="margin-left:0">
+      <button data-v="flat" aria-pressed="true">♭</button>
+      <button data-v="sharp" aria-pressed="false">♯</button>
+    </div>
+  </div>
+
+  <div class="scroller"><div class="map" id="map"></div></div>
+
+  <div class="detail" id="detail" aria-live="polite">
+    <div class="hint">칸이나 아래 건반을 눌러 보세요. 음 이름, 주파수, 내는 방법이 여기에 나타납니다.</div>
+  </div>
+
+  <h2>반음 전체 커버리지</h2>
+  <div class="kbwrap"><div class="kb" id="kb"></div></div>
+  <p class="kbnote">C4부터 C♯7까지 38개의 반음을 모두 낼 수 있습니다. 점 색은 그 음을 내는 방법이고, 건반을 누르면 위 지도에서 해당 칸이 모두 표시됩니다.</p>
+
+  <h2>주법 정리</h2>
+  <div class="legend" id="legend"></div>
+
+  <footer>점선 칸은 이론상 가능하지만 다른 홀의 기본음과 겹쳐서 실제로는 잘 쓰지 않는 음입니다. 오버블로·오버드로는 리드 간격 조정(셋업)이 된 하모니카에서 훨씬 잘 납니다.</footer>
+</main>
+
+<script>
+const TECH = {
+  ob:   {name:"오버블로",  c:"--ob",   desc:"드로 리드를 막고 블로 리드를 반대 방향으로 울려, 그 홀의 드로 음보다 반음 높은 소리를 냅니다. 1·4·5·6번 홀에서 주로 씁니다."},
+  bb:   {name:"블로 벤드", c:"--bb",   desc:"부는 상태에서 입 안 공간과 압력을 조절해 블로 음을 끌어내립니다. 블로 음이 드로 음보다 높은 8~10번 홀에서만 됩니다."},
+  blow: {name:"블로",      c:"--blow", desc:"숨을 불어서 내는 기본 음. 어느 홀이든 C 메이저 코드(도·미·솔)로 이루어져 있습니다."},
+  draw: {name:"드로",      c:"--draw", desc:"숨을 들이마셔 내는 기본 음. 1~4번 홀은 G7 코드 계열이라 블루스의 중심이 됩니다."},
+  db:   {name:"드로 벤드", c:"--db",   desc:"들이마시며 혀 뒤쪽을 낮추고 입 안을 넓혀('이'에서 '우'로 바꾸듯) 드로 음을 끌어내립니다. 1~6번 홀에서 됩니다."},
+  od:   {name:"오버드로",  c:"--od",   desc:"블로 리드를 막고 드로 리드를 울려, 그 홀의 블로 음보다 반음 높은 소리를 냅니다. 7·9·10번 홀에서 주로 씁니다."},
+};
+const BLOW=[60,64,67,72,76,79,84,88,91,96];
+const DRAW=[62,67,71,74,77,81,83,86,89,93];
+const DBEND={1:[61],2:[66,65],3:[70,69,68],4:[73],6:[80]};
+const BBEND={8:[87],9:[90],10:[95,94]};
+const OB={1:63,2:68,3:72,4:75,5:78,6:82};
+const OD={7:85,8:89,9:92,10:97};
+const RARE=new Set(["ob-2","ob-3","od-8"]);
+
+const ROWS=[
+  {tech:"ob",  label:"오버블로", get:h=>OB[h]},
+  {tech:"bb",  label:"블로 벤드 온음", depth:2, get:h=>BBEND[h]?.[1]},
+  {tech:"bb",  label:"블로 벤드 반음", depth:1, get:h=>BBEND[h]?.[0]},
+  {tech:"blow",label:"블로", base:true, get:h=>BLOW[h-1]},
+  {plate:true},
+  {tech:"draw",label:"드로", base:true, get:h=>DRAW[h-1]},
+  {tech:"db",  label:"드로 벤드 반음", depth:1, get:h=>DBEND[h]?.[0]},
+  {tech:"db",  label:"드로 벤드 온음", depth:2, get:h=>DBEND[h]?.[1]},
+  {tech:"db",  label:"드로 벤드 1½음", depth:3, get:h=>DBEND[h]?.[2]},
+  {tech:"od",  label:"오버드로", get:h=>OD[h]},
+];
+
+const state={names:"letter",acc:"flat",hidden:new Set(),sel:null};
+const LET_S=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const LET_F=["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
+const SOLMAP={C:"도",D:"레",E:"미",F:"파",G:"솔",A:"라",B:"시"};
+function nm(m){
+  const base=(state.acc==="flat"?LET_F:LET_S)[m%12];
+  const txt=state.names==="sol"?SOLMAP[base[0]]+base.slice(1):base;
+  return {n:txt,o:Math.floor(m/12)-1};
+}
+const hz=m=>440*Math.pow(2,(m-69)/12);
+const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* catalogue of every playable note */
+const ALL=[];
+ROWS.forEach(r=>{ if(r.plate)return;
+  for(let h=1;h<=10;h++){const m=r.get(h); if(m!=null) ALL.push({m,h,tech:r.tech,depth:r.depth||0,rare:RARE.has(r.tech+"-"+h)});}
+});
+function techLabel(e){
+  if(e.tech==="db"||e.tech==="bb"){return TECH[e.tech].name+" "+["","반음","온음","1½음"][e.depth];}
+  return TECH[e.tech].name;
+}
+function shortCode(e){
+  const d="'".repeat(e.depth);
+  return {blow:`+${e.h}`,draw:`-${e.h}`,db:`-${e.h}${d}`,bb:`+${e.h}${d}`,ob:`${e.h}OB`,od:`${e.h}OD`}[e.tech];
+}
+
+/* filters */
+const filt=document.getElementById("filters");
+Object.entries(TECH).forEach(([k,t])=>{
+  const b=document.createElement("button");
+  b.className="chip";b.style.setProperty("--c",`var(${t.c})`);
+  b.textContent=t.name;b.setAttribute("aria-pressed","true");
+  b.onclick=()=>{state.hidden.has(k)?state.hidden.delete(k):state.hidden.add(k);
+    b.setAttribute("aria-pressed",String(!state.hidden.has(k)));render();};
+  filt.appendChild(b);
+});
+function seg(id,key){
+  document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{
+    state[key]=b.dataset.v;
+    document.querySelectorAll(`#${id} button`).forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    render(); if(state.sel) showDetail(state.sel);
+  });
+}
+seg("nameSeg","names");seg("accSeg","acc");
+
+/* map */
+const map=document.getElementById("map");
+function render(){
+  map.innerHTML="";
+  ROWS.forEach(r=>{
+    if(r.plate){
+      const l=document.createElement("div");l.className="plabel";l.textContent="홀";map.appendChild(l);
+      const p=document.createElement("div");p.className="plate";
+      for(let h=1;h<=10;h++){const s=document.createElement("div");s.className="slot";s.textContent=h;p.appendChild(s);}
+      map.appendChild(p);return;
+    }
+    const l=document.createElement("div");l.className="rlabel";l.textContent=r.label;map.appendChild(l);
+    for(let h=1;h<=10;h++){
+      const m=r.get(h);
+      if(m==null){const e=document.createElement("div");e.className="empty";map.appendChild(e);continue;}
+      const e={m,h,tech:r.tech,depth:r.depth||0,rare:RARE.has(r.tech+"-"+h)};
+      const b=document.createElement("button");
+      b.className="cell"+(r.base?" base":"")+(e.rare?" rare":"")+(state.hidden.has(r.tech)?" hidden":"");
+      b.style.setProperty("--c",`var(${TECH[r.tech].c})`);
+      const n=nm(m);
+      b.innerHTML=`<span class="n">${n.n}</span><span class="o">${n.o}</span>`;
+      b.setAttribute("aria-label",`${h}번 홀 ${techLabel(e)} ${n.n}${n.o}`);
+      b.dataset.m=m;b.dataset.key=r.tech+"-"+h+"-"+e.depth;
+      b.onclick=()=>{select({type:"cell",e});play(e);};
+      map.appendChild(b);
+    }
+  });
+  buildKb();highlight();
+}
+
+/* keyboard */
+const kb=document.getElementById("kb");
+function buildKb(){
+  kb.innerHTML="";
+  const whites=[];for(let m=60;m<=98;m++) if(![1,3,6,8,10].includes(m%12)) whites.push(m);
+  const w=100/whites.length;
+  whites.forEach(m=>kb.appendChild(key(m,"wk")));
+  for(let m=60;m<=97;m++){
+    if(![1,3,6,8,10].includes(m%12))continue;
+    const idx=whites.indexOf(m-1)+1;
+    const k=key(m,"bk");k.style.left=`calc(${idx*w}% - ${w*0.32}%)`;k.style.width=`${w*0.64}%`;kb.appendChild(k);
+  }
+}
+function key(m,cls){
+  const k=document.createElement("button");k.className=cls;k.dataset.m=m;
+  const srcs=ALL.filter(e=>e.m===m&&!state.hidden.has(e.tech));
+  if(m>97){k.classList.add("out");return k;}
+  const dots=document.createElement("div");dots.className="dots";
+  [...new Set(srcs.map(e=>e.tech))].forEach(t=>{const d=document.createElement("span");d.className="dot";d.style.background=`var(${TECH[t].c})`;dots.appendChild(d);});
+  k.appendChild(dots);
+  const n=nm(m);const lb=document.createElement("span");lb.className="klbl";
+  lb.textContent=(cls==="wk"||state.names==="sol")?n.n.replace(/[♯♭]/,"")+(m%12===0?n.o:""):"";
+  if(cls==="wk") k.appendChild(lb);
+  k.setAttribute("aria-label",`${n.n}${n.o}`);
+  k.onclick=()=>{select({type:"pitch",m});const e=srcs.find(x=>x.tech==="blow"||x.tech==="draw")||srcs[0];play(e?{...e,depth:0,tech:"blow"}:{m,tech:"blow"});};
+  return k;
+}
+
+/* selection */
+function select(s){state.sel=s;highlight();showDetail(s);}
+function highlight(){
+  const s=state.sel;
+  document.querySelectorAll(".cell").forEach(c=>{
+    let on=false;
+    if(s){ if(s.type==="cell") on=c.dataset.key===`${s.e.tech}-${s.e.h}-${s.e.depth}`;
+           else on=+c.dataset.m===s.m; }
+    c.classList.toggle("on",on);
+  });
+  const m=s?(s.type==="cell"?s.e.m:s.m):null;
+  document.querySelectorAll(".wk,.bk").forEach(k=>k.classList.toggle("sel",+k.dataset.m===m));
+}
+function showDetail(s){
+  const d=document.getElementById("detail");
+  const m=s.type==="cell"?s.e.m:s.m;const n=nm(m);
+  const srcs=ALL.filter(e=>e.m===m);
+  const tags=srcs.map(e=>`<span class="tag" style="--c:var(${TECH[e.tech].c})">${e.h}번 ${techLabel(e)} <b>${shortCode(e)}</b>${e.rare?" · 드묾":""}</span>`).join("");
+  if(s.type==="cell"){
+    const e=s.e;
+    d.innerHTML=`<div class="big">${n.n}<sub>${n.o}</sub></div>
+      <div class="dtitle">${e.h}번 홀 ${techLabel(e)}</div>
+      <div class="dmeta">${hz(m).toFixed(2)} Hz · 탭 기호 ${shortCode(e)}${e.rare?" · 다른 홀과 겹쳐 잘 쓰지 않음":""}</div>
+      <div class="ddesc">${TECH[e.tech].desc}</div>
+      ${srcs.length>1?`<div class="where">같은 음을 내는 곳 ${tags}</div>`:""}`;
+  }else{
+    d.innerHTML=`<div class="big">${n.n}<sub>${n.o}</sub></div>
+      <div class="dtitle">이 음을 내는 방법 ${srcs.length}가지</div>
+      <div class="dmeta">${hz(m).toFixed(2)} Hz</div>
+      <div class="ddesc">하모니카에서 이 음은 아래 위치에서 나옵니다.</div>
+      <div class="where">${tags}</div>`;
+  }
+}
+
+/* legend */
+document.getElementById("legend").innerHTML=Object.values(TECH).map(t=>
+  `<div style="--c:var(${t.c})"><b>${t.name}</b><p>${t.desc}</p></div>`).join("");
+
+/* sound: reedy synth, bends glide down from the unbent note */
+let ac=null;
+function play(e){
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==="suspended") ac.resume();
+    const t=ac.currentTime, dur=1.1;
+    const target=hz(e.m);
+    let start=target;
+    if(e.tech==="db"&&e.depth) start=hz(DRAW[e.h-1]);
+    if(e.tech==="bb"&&e.depth) start=hz(BLOW[e.h-1]);
+    const out=ac.createGain();out.gain.setValueAtTime(0,t);
+    out.gain.linearRampToValueAtTime(.22,t+.04);out.gain.setValueAtTime(.22,t+dur-.25);out.gain.linearRampToValueAtTime(0,t+dur);
+    const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=Math.min(4200,target*6);lp.Q.value=2.5;
+    const bp=ac.createBiquadFilter();bp.type="peaking";bp.frequency.value=1400;bp.gain.value=6;bp.Q.value=1.2;
+    lp.connect(bp);bp.connect(out);out.connect(ac.destination);
+    const lfo=ac.createOscillator();lfo.frequency.value=5.2;const lg=ac.createGain();lg.gain.value=target*.004;lfo.connect(lg);
+    [["sawtooth",.55],["square",.25]].forEach(([type,g])=>{
+      const o=ac.createOscillator();o.type=type;
+      o.frequency.setValueAtTime(start,t);
+      if(start!==target){o.frequency.setValueAtTime(start,t+.12);o.frequency.exponentialRampToValueAtTime(target,t+.42);}
+      lg.connect(o.frequency);
+      const og=ac.createGain();og.gain.value=g;o.connect(og);og.connect(lp);
+      o.start(t);o.stop(t+dur+.05);
+    });
+    lfo.start(t+.3);lfo.stop(t+dur+.05);
+  }catch(err){}
+}
+
+render();
+</script>
+</body>
+</html>

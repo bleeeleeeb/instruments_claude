@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>크로매틱 하모니카 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dfe3e7; --surface:#f3f5f7; --ink:#14181d; --muted:#5d6670; --line:#c4cad1;
+  --plate-a:#fbfcfd; --plate-b:#b9c0c8; --comb:#9c2f22; --slot:#1c2026;
+  --blow:#2463d8; --draw:#d4462a; --bend:#b0841f; --over:#7b45d0;
+  --display:"Bricolage Grotesque","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181c; --surface:#1e2228; --ink:#eef1f4; --muted:#98a2ad; --line:#323840;
+    --plate-a:#a3acb6; --plate-b:#4a525b; --comb:#b8473a; --slot:#0b0d10;
+    --blow:#6b9bff; --draw:#ff7a5c; --bend:#f2b24a; --over:#a982ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --ink:#eef1f4; --muted:#98a2ad; --line:#323840;
+  --plate-a:#a3acb6; --plate-b:#4a525b; --comb:#b8473a; --slot:#0b0d10;
+  --blow:#6b9bff; --draw:#ff7a5c; --bend:#f2b24a; --over:#a982ff;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid var(--bend);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-columns:minmax(92px,19%) 1fr minmax(100px,21%);gap:10px;
+  padding:8px max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px))}
+
+/* left: bend + overbend */
+.left{display:flex;flex-direction:column;gap:8px;min-height:0}
+.zone{position:relative;border-radius:18px;border:2px solid var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface));touch-action:none;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer}
+.zone.bend{flex:1}
+.zone.bend b{font-size:1.6rem}
+.harp.slid .hole .bn,.harp.slid .hole .dn{color:var(--bend)}
+.hole.oct .slot{box-shadow:inset 0 2px 5px rgba(0,0,0,.7),0 -3px 0 -1px var(--bend)}
+#dsZone{--c:var(--draw)} #bsZone{--c:var(--blow)}
+.zone.over{--c:var(--over);flex:1}
+.left.noover .zone.over{display:none}
+.left{gap:6px}
+.zone b{font-family:var(--display);font-weight:700;font-size:1.05rem;color:color-mix(in srgb,var(--c) 80%,var(--ink));position:relative;z-index:2}
+.zone small{font-size:.66rem;color:var(--muted);position:relative;z-index:2;text-align:center;line-height:1.3;padding:0 4px}
+.zone.on{background:color-mix(in srgb,var(--c) 30%,var(--surface))}
+.zone.over.on{background:var(--c)}
+.zone.over.on b,.zone.over.on small{color:#fff}
+.fill{position:absolute;left:0;right:0;top:0;height:0;background:color-mix(in srgb,var(--bend) 45%,transparent);z-index:1}
+.tick{position:absolute;left:10%;right:10%;height:0;border-top:1.5px dashed color-mix(in srgb,var(--bend) 70%,transparent);z-index:1}
+.tick span{position:absolute;right:0;top:-14px;font:700 .62rem var(--display);color:var(--bend)}
+
+/* right: draw / blow */
+.right{display:flex;flex-direction:column;gap:8px;min-height:0}
+.dir{flex:1;border-radius:18px;border:2.5px solid var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface));color:color-mix(in srgb,var(--c) 85%,var(--ink));touch-action:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.dir b{font-family:var(--display);font-weight:800;font-size:1.5rem}
+.dir small{font-size:.7rem;color:var(--muted)}
+#drawBtn{--c:var(--draw)} #blowBtn{--c:var(--blow)}
+body.swap .app{grid-template-columns:minmax(100px,21%) 1fr minmax(92px,19%)}
+body.swap .right{order:-1} body.swap .left{order:5}
+body.noleft .left{display:none}
+body.noleft .app{grid-template-columns:0 1fr minmax(120px,28%)}
+body.noleft.swap .app{grid-template-columns:minmax(120px,28%) 1fr 0}
+.right.flip>.dir{display:none}
+#flipBox{display:none;flex:1;min-height:0;gap:6px;flex-direction:column}
+.right.flip #flipBox{display:flex}
+#flipBox .half{display:flex;flex:1;min-height:0;gap:6px}
+#flipBox.bands .half{flex-direction:column}
+.fz{--c:var(--blow);flex:3;min-height:0;min-width:0;border-radius:14px;border:2.5px solid var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface));color:color-mix(in srgb,var(--c) 85%,var(--ink));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:background .15s,border-color .15s}
+.fz.fixed{flex:1;border-style:dashed}
+.fz.d{--c:var(--draw)}
+.fz b{font-family:var(--display);font-weight:800;font-size:1.15rem;line-height:1}
+.fz small{font-size:.6rem;color:var(--muted);text-align:center;line-height:1.15}
+.fz.fixed b{font-size:.8rem}
+.fz.on{background:var(--c);color:#fff}
+.fz.on small{color:#fff}
+.fz.flash{animation:fl .35s}
+@keyframes fl{0%{transform:scale(.96)}100%{transform:none}}
+.dir,.fz{position:relative}
+.cz{position:absolute;display:flex;align-items:center;justify-content:center;font:800 .7rem var(--display);color:inherit;background:color-mix(in srgb,var(--c) 22%,transparent);z-index:2}
+.cz.h{top:0;bottom:0;width:33.3%}
+.cz.h.r{right:0;border-left:2px dashed color-mix(in srgb,var(--c) 60%,transparent)}
+.cz.h.l{left:0;border-right:2px dashed color-mix(in srgb,var(--c) 60%,transparent)}
+.cz.vt{left:0;right:0;top:0;height:33.3%;border-bottom:2px dashed color-mix(in srgb,var(--c) 60%,transparent)}
+.cz.vbot{left:0;right:0;bottom:0;height:33.3%;border-top:2px dashed color-mix(in srgb,var(--c) 60%,transparent)}
+.cz.on{background:rgba(255,255,255,.35)}
+.tiltsh{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:12;padding:4px 14px;border-radius:999px;font:800 .9rem var(--display);background:var(--bend);color:#1b1205;opacity:0;transition:opacity .1s;pointer-events:none}
+.tiltsh.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.fz.flash{animation:none}}
+.dir.on{background:var(--c);color:#fff}
+.dir.on small{color:#fff}
+
+/* center */
+.center{display:flex;flex-direction:column;min-width:0;min-height:0}
+.readout{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0}
+.note{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,10vh,4.4rem);line-height:.9;letter-spacing:-.03em;color:var(--cur,var(--ink))}
+.tech{font-weight:600;font-size:.9rem;margin-top:6px;min-height:1.3em}
+.hz{font-size:.74rem;color:var(--muted);min-height:1.2em}
+.harp{position:relative;height:clamp(84px,26vh,118px);overflow:hidden;margin:4px 0}
+.strip{position:absolute;top:50%;left:0;display:grid;grid-template-columns:repeat(var(--n,12),var(--hw));transform:translate(0,-50%);will-change:transform}
+.hole{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 2px}
+.hole .bn{font:700 .66rem var(--display);color:var(--blow)}
+.hole .dn{font:700 .66rem var(--display);color:var(--draw)}
+.hole .slot{width:78%;height:22px;border-radius:5px;background:var(--slot);color:#dfe5ea;display:flex;align-items:center;justify-content:center;font:700 .74rem var(--display);box-shadow:inset 0 2px 5px rgba(0,0,0,.7)}
+.hole.cur .slot{background:var(--bend);color:#1b1205;box-shadow:none}
+.plate{position:absolute;top:50%;left:-6px;right:-6px;height:44px;transform:translateY(-50%);border-radius:10px;
+  background:linear-gradient(180deg,var(--plate-a),var(--plate-b) 45%,var(--plate-a) 55%,var(--plate-b));z-index:-1;
+  box-shadow:0 0 0 4px var(--comb)}
+.mouth{position:absolute;top:0;bottom:0;left:50%;width:calc(var(--hw) * var(--mw,1) + 10px);transition:width .15s;transform:translateX(-50%);border:2.5px solid var(--ink);border-radius:20px;pointer-events:none;box-shadow:0 0 0 999px color-mix(in srgb,var(--bg) 45%,transparent)}
+.mouth::after{content:"";position:absolute;left:50%;top:-1px;width:10px;height:6px;transform:translateX(-50%);background:var(--ink);border-radius:0 0 6px 6px}
+.bar{display:flex;align-items:center;gap:8px;padding-top:4px}
+.ib{flex:0 0 auto;height:36px;min-width:36px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 10px;font-size:.78rem;font-weight:600;gap:6px}
+.ib svg{width:19px;height:19px}
+.status{flex:1;min-width:0;font-size:.7rem;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+body.portrait .app{grid-template-columns:74px 1fr 82px;gap:6px}
+body.portrait .zone b{font-size:.86rem}
+body.portrait .dir b{font-size:1.2rem}
+body.portrait .note{font-size:clamp(2.2rem,9vh,3.4rem)}
+body.portrait .ib{padding:0 8px}
+/* overlays */
+.ov{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+.ov[hidden]{display:none}
+.ov .box{max-width:460px}
+.ov h1{font-family:var(--display);font-weight:800;font-size:1.8rem;letter-spacing:-.02em;margin:0 0 8px;line-height:1.1}
+.ov p{color:var(--muted);font-size:.9rem;margin:0 0 16px;line-height:1.55}
+.go{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:12px 26px;font-weight:600;font-size:1rem;cursor:pointer}
+.rotate{font-size:3rem;display:block;margin-bottom:8px}
+
+dialog{border:0;padding:0;background:transparent;max-width:none;width:100%;max-height:100%;margin:0;inset:auto 0 0 0;position:fixed}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.sheet{background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;max-width:640px;margin:0 auto;padding:14px 18px calc(16px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
+.sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:1.25rem;margin:0}
+.close{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:7px 16px;font-weight:600;cursor:pointer}
+.grp{padding:10px 0;border-top:1px solid var(--line)}
+.grp:first-of-type{border-top:0}
+#gFlip[hidden],#gTSh[hidden]{display:none}
+.grp h3{font-size:.78rem;font-weight:600;color:var(--muted);margin:0 0 7px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:11px;padding:7px 9px;font-size:.86rem;font-weight:500;cursor:pointer;min-width:46px}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.tg{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0;font-size:.9rem;cursor:pointer}
+.tg small{display:block;color:var(--muted);font-size:.74rem}
+.tg input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:0 0 auto;cursor:pointer;margin:0}
+.tg input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.tg input:checked{background:var(--bend)}
+.tg input:checked::after{left:21px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+@media (max-width:560px){.cols{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.tg input::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="left" id="left">
+    <div class="zone bend" id="dsZone" aria-label="드로 샵, 들이마시며 슬라이드"><b>♯</b><small>드로 + 슬라이드</small></div>
+    <div class="zone bend" id="bsZone" aria-label="블로 샵, 불며 슬라이드"><b>♯</b><small>블로 + 슬라이드</small></div>
+  </div>
+
+  <div class="center">
+    <div class="readout">
+      <div class="note" id="note">–</div>
+      <div class="tech" id="tech">드로나 블로 버튼을 누르세요</div>
+      <div class="hz" id="hz"></div>
+    </div>
+    <div class="harp" id="harp">
+      <div class="strip" id="strip"><div class="plate"></div></div>
+      <div class="mouth"></div>
+    </div>
+    <div class="bar">
+      <button class="ib" id="gear" aria-label="환경설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <div class="status" id="status"></div>
+      <button class="ib" id="vBtn" aria-label="1음, 3음 화음 전환"></button>
+      <button class="ib" id="center">기준 맞추기</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <button class="dir" id="blowBtn" aria-label="블로, 불기"><b>블로</b><small>불기</small></button>
+    <button class="dir" id="drawBtn" aria-label="드로, 들이마시기"><b>드로</b><small>들이마시기</small></button>
+    <div id="flipBox"></div>
+  </div>
+</div>
+
+<div class="tiltsh" id="tiltSh">♯ 슬라이드</div>
+<div class="ov" id="startOv">
+  <div class="box">
+    <h1>크로매틱 하모니카 시뮬레이터</h1>
+    <p>가로로 드는 걸 권장하지만 세로로도 돼요. 폰을 좌우로 돌리면 하모니카가 입(가운데 틀) 아래로 미끄러지며 홀이 바뀝니다. 오른손은 위 블로·아래 드로, 왼손은 위 드로♯·아래 블로♯(슬라이드)예요.</p>
+    <button class="go" id="startBtn">시작하기</button>
+    <p id="startNote" style="margin-top:14px;font-size:.78rem"></p>
+  </div>
+</div>
+
+
+<dialog id="dlg">
+  <div class="sheet">
+    <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+    <div class="cols">
+      <div>
+        <div class="grp"><h3>홀 이동 방식</h3><div class="seg" id="sMode"></div></div>
+        <div class="grp"><h3>감도 (한 홀당 각도)</h3><div class="seg" id="sDeg"></div></div>
+        <div class="grp">
+          <label class="tg"><span>방향 반전<small>움직이는 방향과 홀 방향이 반대로 느껴질 때</small></span><input type="checkbox" id="sInv"></label>
+        </div>
+      </div>
+      <div>
+        <div class="grp"><h3>하모니카 크기</h3><div class="seg" id="sHoles"></div></div>
+        <div class="grp"><h3>입력 버튼 위치</h3><div class="seg" id="sSide"></div>
+          <h3 style="margin-top:10px">왼쪽 ♯ 버튼</h3><div class="seg" id="sLeft"></div></div>
+        <div class="grp"><h3>블로·드로 버튼 모드</h3><div class="seg" id="sFlip"></div>
+          <h3 style="margin-top:10px">화음 영역 (바깥쪽 1/3을 누르면 3음)</h3><div class="seg" id="sChordA"></div>
+          <div id="gFlip"><h3 style="margin-top:10px">자동 전환 영역 나누기</h3><div class="seg" id="sShape"></div>
+          <h3 style="margin-top:10px">1번 홀에서 위쪽 전환 영역</h3><div class="seg" id="sFStart"></div></div></div>
+        <div class="grp"><h3>기울여서 ♯ (슬라이드)</h3><div class="seg" id="sTSh"></div>
+          <div id="gTSh"><h3 style="margin-top:10px">기울이는 각도</h3><div class="seg" id="sTShDeg"></div></div></div>
+        <div class="grp"><h3>소리 나는 홀 수</h3><div class="seg" id="sVoices"></div></div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* C chromatic, solo tuning: per 4 holes blow C E G C / draw D F A B; slide = +1 */
+const B4=[0,4,7,12], D4=[2,5,9,11];
+const SIZES={10:48+12,12:60,16:48};
+const NAMES=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const DEF={side:"right",leftBtns:true,flip:"off",shape:"auto",fstart:"blow",chordA:false,tsh:"off",tshDeg:15,voices:1,holes:12,mode:"yaw",deg:7,inv:false};
+let S={...DEF};
+try{const v=JSON.parse(localStorage.getItem("chrom-harp2")||"null");if(v)S={...DEF,...v};}catch(e){}
+const save=()=>{try{localStorage.setItem("chrom-harp2",JSON.stringify(S));}catch(e){}};
+const nm=m=>NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1);
+const noteOf=(h,d,sh)=>SIZES[S.holes]+Math.floor((h-1)/4)*12+(d==="blow"?B4:D4)[(h-1)%4]+(sh?1:0);
+const A4=440;
+
+/* ---------- harmonica strip ---------- */
+const strip=document.getElementById("strip"), harp=document.getElementById("harp");
+function buildStrip(){
+  strip.querySelectorAll(".hole").forEach(h=>h.remove());
+  harp.style.setProperty("--n",S.holes);
+  for(let h=1;h<=S.holes;h++){
+    const d=document.createElement("div");d.className="hole"+((h-1)%4===0?" oct":"");d.dataset.h=h;
+    d.innerHTML=`<span class="bn"></span><span class="slot">${h}</span><span class="dn"></span>`;
+    strip.appendChild(d);
+  }
+  labelStrip(false);
+}
+function labelStrip(sh){
+  harp.classList.toggle("slid",sh);
+  strip.querySelectorAll(".hole").forEach(d=>{const h=+d.dataset.h;
+    d.querySelector(".bn").textContent=NAMES[noteOf(h,"blow",sh)%12];
+    d.querySelector(".dn").textContent=NAMES[noteOf(h,"draw",sh)%12];});
+}
+let holeW=60;
+function sizeStrip(){holeW=Math.max(46,Math.min(72,harp.clientWidth/5.2));harp.style.setProperty("--hw",holeW+"px");place();}
+let pos=5, hole=5; // continuous position in hole units, selected hole
+function place(){
+  const x=harp.clientWidth/2-(pos-1)*holeW-holeW/2;
+  strip.style.transform=`translate(${x}px,-50%)`;
+}
+function setPos(p){
+  const fixed3=S.voices===3&&!S.chordA;
+  const lo=fixed3?2:1, hi=fixed3?S.holes-1:S.holes;
+  pos=Math.max(lo-.4,Math.min(hi+.4,p));
+  const r=Math.round(pos);
+  if(hole<lo||hole>hi){hole=Math.max(lo,Math.min(hi,hole));sound();}
+  if(Math.abs(pos-hole)>.62||r===hole){ if(r!==hole){hole=Math.max(lo,Math.min(hi,r));sound();} }
+  markHoles();
+  place();
+}
+
+/* ---------- sensors ---------- */
+let base=null, basePos=4, sensorOK=false, lastAngle=null;
+const rad=Math.PI/180;
+function angleFrom(a,b,g){
+  a*=rad;b*=rad;g*=rad;
+  const cA=Math.cos(a),sA=Math.sin(a),cB=Math.cos(b),sB=Math.sin(b),cG=Math.cos(g),sG=Math.sin(g);
+  if(S.mode==="yaw"){ // heading of the screen normal around the vertical axis
+    const vx=cG*sA*sB+cA*sG, vy=sA*sG-cA*cG*sB;
+    return Math.atan2(vx,vy)/rad;
+  } // tilt: rotation in the screen plane (steering wheel)
+  return Math.atan2(-cB*sG,sB)/rad;
+}
+const wrap=d=>((d+540)%360)-180;
+let elevBase=null;
+function elevation(a,b,g){
+  a*=rad;b*=rad;g*=rad;
+  const cA=Math.cos(a),sA=Math.sin(a),cB=Math.cos(b),sB=Math.sin(b),cG=Math.cos(g),sG=Math.sin(g);
+  const vx=cG*sA*sB+cA*sG, vy=sA*sG-cA*cG*sB, vz=cB*cG;
+  return Math.atan2(vz,Math.hypot(vx,vy))/rad;   // screen normal above/below the horizon
+}
+function onOrient(e){
+  if(e.alpha==null&&e.beta==null) return;
+  sensorOK=true;
+  if(S.tsh!=="off"){
+    const el=elevation(e.alpha||0,e.beta||0,e.gamma||0);
+    if(elevBase===null) elevBase=el;
+    const dlt=(el-elevBase)*(S.tsh==="fwd"?1:-1);   // forward: top of the phone tips away, screen turns upward
+    const want=tiltSharp?dlt>S.tshDeg*.6:dlt>S.tshDeg;   // hysteresis
+    if(want!==tiltSharp){tiltSharp=want;refreshSlide();sound();}
+  }
+  if(S.mode==="touch") return;
+  const ang=angleFrom(e.alpha||0,e.beta||0,e.gamma||0);
+  lastAngle=ang;
+  if(base===null){base=ang;basePos=pos;}
+  const delta=wrap(ang-base)*(S.inv?-1:1);
+  const target=basePos+delta/S.deg;
+  setPos(pos+(target-pos)*.45);
+}
+function recenter(){elevBase=null;tiltSharp=false;refreshSlide();base=lastAngle;basePos=Math.round(pos);setPos(basePos);status();}
+async function enableSensors(){
+  try{
+    if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
+      const r=await DeviceOrientationEvent.requestPermission(); if(r!=="granted") throw 0;
+    }
+    if(!window.__orientOn){window.__orientOn=true;addEventListener("deviceorientation",onOrient);}
+  }catch(e){}
+  setTimeout(()=>{ if(!sensorOK&&S.mode!=="touch"){S.mode="touch";save();status("센서를 쓸 수 없어 터치 드래그로 바꿨어요");} },1500);
+}
+
+/* touch drag on the harmonica (touch mode, or always as a backup) */
+let drag=null;
+harp.style.touchAction="none";
+harp.addEventListener("pointerdown",e=>{harp.setPointerCapture(e.pointerId);drag={x:e.clientX,p:pos};});
+harp.addEventListener("pointermove",e=>{ if(!drag) return; setPos(drag.p-(e.clientX-drag.x)/holeW); if(S.mode!=="touch"){basePos=pos;base=lastAngle;} });
+const endDrag=()=>{ if(!drag) return; drag=null; setPos(Math.round(pos)); };
+harp.addEventListener("pointerup",endDrag);harp.addEventListener("pointercancel",endDrag);
+
+/* ---------- controls ---------- */
+let dir=null, leftK=null, slidShown=false;
+const drawBtn=document.getElementById("drawBtn"), blowBtn=document.getElementById("blowBtn");
+drawBtn.dataset.ctl="draw";blowBtn.dataset.ctl="blow";
+const ZONES={ds:document.getElementById("dsZone"),bs:document.getElementById("bsZone")};
+Object.entries(ZONES).forEach(([k,z])=>z.dataset.ctl=k);
+/* auto-switch blow/draw zones (same idea as the diatonic simulator) */
+const DIRCTL=new Set(["blow","draw","fd","fb","va","vb"]);
+const OPPD={blow:"draw",draw:"blow"};
+const flipA=()=>((hole%2===1)===(S.fstart==="blow"))?"blow":"draw";
+function resolveDir(c){
+  if(!c) return null;
+  if(c==="fd") return "draw"; if(c==="fb") return "blow";
+  if(c==="va") return flipA(); if(c==="vb") return OPPD[flipA()];
+  return c;
+}
+const flipBox=document.getElementById("flipBox");
+const KO={blow:"블로",draw:"드로"};
+function fz(ctl,fixedDir){
+  const z=document.createElement("div");z.className="fz"+(fixedDir?" fixed":"");z.dataset.ctl=ctl;
+  z.innerHTML="<b></b><small></small>";
+  if(fixedDir){z.classList.toggle("d",fixedDir==="draw");z.querySelector("b").textContent=KO[fixedDir];z.querySelector("small").textContent="고정";}
+  return z;
+}
+function buildFlip(){
+  flipBox.innerHTML="";
+  const shape=S.shape==="auto"?(innerHeight>innerWidth?"cols":"bands"):S.shape;
+  flipBox.className=shape;
+  const top=document.createElement("div");top.className="half";
+  const bot=document.createElement("div");bot.className="half";
+  const fd=fz("fd","draw"), va=fz("va"), vb=fz("vb"), fb=fz("fb","blow");
+  if(shape==="bands"){top.append(fb,va);bot.append(vb,fd);}
+  else if(S.side==="right"){top.append(va,fb);bot.append(vb,fd);} else {top.append(fb,va);bot.append(fd,vb);}
+  flipBox.append(top,bot);
+  paintFlip(false);addChordAreas();
+}
+let lastA=null;
+function paintFlip(flash=true){
+  if(S.flip!=="on") return;
+  const A=flipA();
+  [["va",A],["vb",OPPD[A]]].forEach(([k,d])=>{
+    const z=flipBox.querySelector(`[data-ctl="${k}"]`); if(!z) return;
+    z.classList.toggle("d",d==="draw");
+    z.querySelector("b").textContent=KO[d];z.querySelector("small").textContent=`${hole}번 홀`;
+    if(flash&&lastA!==null&&lastA!==A){z.classList.remove("flash");void z.offsetWidth;z.classList.add("flash");}
+  });
+  lastA=A;
+}
+function addChordAreas(){
+  document.querySelectorAll(".cz").forEach(c=>c.remove());
+  if(!S.chordA) return;
+  const outer=S.side==="right"?"r":"l";
+  const mk=(parent,cls)=>{const c=document.createElement("div");c.className="cz "+cls;c.dataset.ctl=parent.dataset.ctl;c.dataset.chord="3";c.textContent="3음";parent.appendChild(c);};
+  if(S.flip==="on"){
+    const cols=flipBox.classList.contains("cols");
+    const va=flipBox.querySelector('[data-ctl="va"]'), vb=flipBox.querySelector('[data-ctl="vb"]');
+    if(va) mk(va,cols?"vt":"h "+outer);
+    if(vb) mk(vb,cols?"vbot":"h "+outer);
+  }else ["blowBtn","drawBtn"].forEach(id=>mk(document.getElementById(id),"h "+outer));
+}
+let curChord=1, tiltSharp=false;
+const V=()=>S.chordA?curChord:S.voices;
+const sharpOn=()=>!!leftK||tiltSharp;
+function refreshSlide(){ const on=sharpOn(); if(on!==slidShown){slidShown=on;labelStrip(on);} document.getElementById("tiltSh").classList.toggle("on",tiltSharp); }
+/* slide-touch: a finger can enter, leave and move between controls without lifting */
+const ptrs=new Map(); let tick=0;
+function ctlAt(x,y){const el=document.elementFromPoint(x,y);const c=el&&el.closest?el.closest("[data-ctl]"):null;return c&&c.offsetParent!==null?c:null;}
+function updCtl(){
+  const on=new Set();let bD=null,bL=null;
+  ptrs.forEach(p=>{ if(!p.c) return; on.add(p.c); const k=p.c.dataset.ctl;
+    if(DIRCTL.has(k)){ if(!bD||p.t>bD.t) bD=p; } else { if(!bL||p.t>bL.t) bL=p; } });
+  [...on].forEach(c=>{if(c.dataset.chord)on.add(c.parentElement);});
+  document.querySelectorAll("[data-ctl]").forEach(c=>c.classList.toggle("on",on.has(c)));
+  curChord=bD&&bD.c.dataset.chord==="3"?3:1;
+  dir=bD?bD.c.dataset.ctl:null;
+  leftK=bL?bL.c.dataset.ctl:null;
+  refreshSlide();
+  sound();
+}
+document.querySelectorAll(".left,.right").forEach(col=>{
+  col.style.touchAction="none";
+  col.addEventListener("pointerdown",e=>{e.preventDefault();initAudio();col.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId,{c:ctlAt(e.clientX,e.clientY),y:e.clientY,t:++tick});updCtl();});
+  col.addEventListener("pointermove",e=>{const p=ptrs.get(e.pointerId);if(!p)return;
+    const c=ctlAt(e.clientX,e.clientY);p.y=e.clientY;
+    if(c!==p.c){p.c=c;p.t=++tick;updCtl();} else if(c&&false) updCtl();});
+  const up=e=>{if(ptrs.delete(e.pointerId)) updCtl();};
+  col.addEventListener("pointerup",up);col.addEventListener("pointercancel",up);
+  col.addEventListener("contextmenu",e=>e.preventDefault());
+});
+const effDir=()=>leftK?(leftK==="ds"?"draw":"blow"):resolveDir(dir);
+
+/* ---------- pitch logic ---------- */
+/* returns list of notes; the slide shifts every hole */
+function computeAll(){
+  const c=compute(hole,true); if(!c) return null;
+  if(V()!==3) return {notes:[c.m],tech:c.tech,c:c.c};
+  const lo=Math.max(1,Math.min(hole-1,S.holes-2));
+  const notes=[lo,lo+1,lo+2].map(h=>h===hole?c.m:compute(h,false).m);
+  const d=effDir()==="blow"?"블로":"드로";
+  let tech=`${lo}~${lo+2}번 ${d}`;
+  if(sharpOn()) tech+=" + 슬라이드";
+  return {notes,tech,c:c.c};
+}
+const TRI=[["",[0,4,7]],["m",[0,3,7]],["dim",[0,3,6]],["aug",[0,4,8]],["sus4",[0,5,7]]];
+function chordName(ms){
+  const r=ms.map(m=>Math.round(m)), pcs=[...new Set(r.map(m=>((m%12)+12)%12))];
+  const low=((Math.min(...r)%12)+12)%12;
+  for(const root of pcs)for(const [suf,iv] of TRI){
+    const set=iv.map(i=>(root+i)%12);
+    if(pcs.length>=2&&pcs.every(p=>set.includes(p))&&(pcs.length===3||pcs.includes(root))){
+      const nmR=NAMES[root];return nmR+suf+(low!==root?"/"+NAMES[low]:"");
+    }
+  }
+  return null;
+}
+function compute(h=hole,center=true){
+  const d=effDir(); if(!d) return null;
+  const sh=sharpOn(), label=d==="blow"?"블로":"드로";
+  return {m:noteOf(h,d,sh),tech:center?`${h}번 ${label}${sh?" + 슬라이드":""}`:"",c:sh?"--bend":(d==="blow"?"--blow":"--draw")};
+}
+function drawTicks(){}
+
+/* ---------- sound ---------- */
+let ac=null, g, lp, lfoG, voices=[], sounding=false;
+function initAudio(){
+  if(ac){if(ac.state==="suspended")ac.resume();return;}
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  lp=ac.createBiquadFilter();lp.type="lowpass";lp.Q.value=2.2;
+  const pk=ac.createBiquadFilter();pk.type="peaking";pk.frequency.value=1500;pk.gain.value=6;pk.Q.value=1.1;
+  g=ac.createGain();g.gain.value=0;
+  const lfo=ac.createOscillator();lfo.frequency.value=5.4;lfoG=ac.createGain();lfoG.gain.value=0;lfo.connect(lfoG);
+  for(let i=0;i<3;i++){
+    const o1=ac.createOscillator();o1.type="sawtooth";const o2=ac.createOscillator();o2.type="square";
+    const g1=ac.createGain();g1.gain.value=.55;const g2=ac.createGain();g2.gain.value=.22;
+    const vg=ac.createGain();vg.gain.value=0;
+    o1.connect(g1);o2.connect(g2);g1.connect(vg);g2.connect(vg);vg.connect(lp);
+    lfoG.connect(o1.detune);lfoG.connect(o2.detune);
+    o1.detune.value=o2.detune.value=0;o1.start();o2.start();
+    voices.push({o:[o1,o2],vg});
+  }
+  lp.connect(pk);pk.connect(g);g.connect(ac.destination);lfo.start();
+}
+const hz=m=>A4*Math.pow(2,(m-69)/12);
+function markHoles(){
+  const n=V(), lo=n===3?Math.max(1,Math.min(hole-1,S.holes-2)):hole, hi=n===3?lo+2:hole;
+  strip.querySelectorAll(".hole").forEach(el=>{const h=+el.dataset.h;el.classList.toggle("cur",h>=lo&&h<=hi);});
+  harp.style.setProperty("--mw",n);
+}
+function sound(){
+  paintFlip();markHoles();
+  const r=computeAll();
+  drawTicks();
+  const noteEl=document.getElementById("note");
+  if(!r){
+    if(ac&&sounding){g.gain.setTargetAtTime(0,ac.currentTime,.04);sounding=false;}
+    noteEl.style.removeProperty("--cur");
+    return;
+  }
+  const ms=r.notes;
+  if(ms.length===1){noteEl.textContent=nm(Math.round(ms[0]));document.getElementById("hz").textContent=`${hz(ms[0]).toFixed(1)} Hz`;}
+  else{
+    const cn=chordName(ms);
+    noteEl.textContent=cn||nm(Math.round(ms[1]));
+    document.getElementById("hz").textContent=ms.map(m=>nm(Math.round(m))).join(" · ");
+  }
+  noteEl.style.setProperty("--cur",`var(${r.c})`);
+  document.getElementById("tech").textContent=r.tech;
+  if(!ac) return;
+  const t=ac.currentTime, fresh=!sounding, bending=false;
+  const level=ms.length===1?1:.62;
+  voices.forEach((v,i)=>{
+    if(i<ms.length){
+      const f=hz(ms[i]);
+      v.o.forEach(o=>{ if(fresh){o.frequency.cancelScheduledValues(t);o.frequency.setValueAtTime(f,t);} else o.frequency.setTargetAtTime(f,t,bending?.03:.008); });
+      v.vg.gain.setTargetAtTime(level,t,.01);
+    }else v.vg.gain.setTargetAtTime(0,t,.02);
+  });
+  if(fresh){
+    g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value*.15,t);g.gain.setTargetAtTime(.2,t,.02);
+    lfoG.gain.cancelScheduledValues(t);lfoG.gain.setValueAtTime(0,t);lfoG.gain.setTargetAtTime(7,t+.4,.25);
+    sounding=true;
+  }
+  const fc=hz(ms[ms.length-1]);
+  lp.frequency.setTargetAtTime(Math.min(6500,fc*(effDir()==="draw"?4:5.5)),t,.03);
+}
+
+/* ---------- status / layout ---------- */
+function status(msg){
+  const el=document.getElementById("status");
+  if(msg){el.textContent=msg;return;}
+  const mode={yaw:"좌우로 돌리기",tilt:"핸들처럼 기울이기",touch:"하모니카 드래그"}[S.mode];
+  el.textContent=`${S.holes}홀 C 크로매틱 · ${mode}`;
+}
+function applyVoices(){
+  harp.style.setProperty("--mw",S.voices===3?3:1);
+  const b=document.getElementById("vBtn");b.textContent=S.voices===3?"3음":"1음";
+  b.style.background=S.voices===3?"var(--ink)":"";b.style.color=S.voices===3?"var(--bg)":"";
+}
+document.getElementById("vBtn").onclick=()=>{S.voices=S.voices===3?1:3;save();applySettings();};
+function applySettings(){
+  if(hole>S.holes){hole=S.holes;pos=S.holes;}
+  applyVoices();
+  document.body.classList.toggle("swap",S.side==="left");
+  document.body.classList.toggle("noleft",!S.leftBtns);
+  document.querySelector(".right").classList.toggle("flip",S.flip==="on");
+  if(S.flip==="on") buildFlip(); else addChordAreas();
+  document.getElementById("vBtn").hidden=S.chordA;
+  if(S.tsh==="off"&&tiltSharp){tiltSharp=false;refreshSlide();}
+  elevBase=null;
+  buildStrip();sizeStrip();setPos(pos);status();sound();
+}
+function checkRot(){const p=innerHeight>innerWidth;if(S.flip==="on"&&S.shape==="auto")buildFlip();document.body.classList.toggle("portrait",p);sizeStrip();status(p?"가로로 돌리면 더 편해요":null);}
+addEventListener("resize",checkRot);
+addEventListener("orientationchange",()=>setTimeout(checkRot,200));
+
+/* ---------- settings dialog ---------- */
+const dlg=document.getElementById("dlg");
+document.getElementById("gear").onclick=()=>{renderSettings();dlg.showModal();};
+document.getElementById("closeBtn").onclick=()=>dlg.close();
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+document.getElementById("center").onclick=recenter;
+function seg(id,opts,key){
+  const box=document.getElementById(id);box.innerHTML="";
+  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));
+    b.onclick=()=>{S[key]=v;save();if(key==="tsh"&&v!=="off")enableSensors();if(key==="mode"){base=null;}applySettings();renderSettings();};box.appendChild(b);});
+}
+function renderSettings(){
+  seg("sMode",[["yaw","좌우로 돌리기"],["tilt","핸들처럼 기울이기"],["touch","터치 드래그"]],"mode");
+  seg("sDeg",[[4,"4°"],[7,"7°"],[10,"10°"],[14,"14°"]],"deg");
+  seg("sHoles",[[10,"10홀"],[12,"12홀"],[16,"16홀"]],"holes");
+  seg("sSide",[["right","오른쪽"],["left","왼쪽"]],"side");
+  seg("sLeft",[[true,"보이기"],[false,"숨기기 (한 손 연주)"]],"leftBtns");
+  seg("sFlip",[["off","블로·드로 두 버튼"],["on","홀마다 자동 전환"]],"flip");
+  seg("sChordA",[[false,"끔"],[true,"켬"]],"chordA");
+  seg("sShape",[["auto","화면 방향 따라"],["bands","가로 8등분"],["cols","세로로 나눔"]],"shape");
+  seg("sFStart",[["blow","블로"],["draw","드로"]],"fstart");
+  document.getElementById("gFlip").hidden=S.flip!=="on";
+  seg("sTSh",[["off","끔"],["fwd","앞으로 숙이면 ♯"],["back","뒤로 젖히면 ♯"]],"tsh");
+  seg("sTShDeg",[[8,"8°"],[15,"15°"],[25,"25°"]],"tshDeg");
+  document.getElementById("gTSh").hidden=S.tsh==="off";
+  seg("sVoices",[[1,"1음 (한 홀)"],[3,"3음 화음 (세 홀)"]],"voices");
+  [["sInv","inv"]].forEach(([id,k])=>{const el=document.getElementById(id);el.checked=S[k];el.onchange=()=>{S[k]=el.checked;save();applySettings();};});
+}
+
+/* ---------- start ---------- */
+document.getElementById("startBtn").onclick=async()=>{
+  initAudio();
+  try{ if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); }catch(e){}
+  try{ if(screen.orientation&&screen.orientation.lock) await screen.orientation.lock("landscape"); }catch(e){}
+  await enableSensors();
+  document.getElementById("startOv").hidden=true;
+  checkRot();
+};
+if(!("DeviceOrientationEvent" in window)) document.getElementById("startNote").textContent="이 기기에서는 센서를 찾지 못했어요. 하모니카를 손가락으로 끌어서 홀을 바꿀 수 있어요.";
+applySettings();checkRot();
+</script>
+</body>
+</html>

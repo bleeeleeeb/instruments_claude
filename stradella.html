@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>스트라델라 베이스 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e7e3e6; --surface:#f6f3f5; --ink:#1d1418; --muted:#6b5f65; --line:#d2c9ce;
+  --panel:#6b1d2a; --panel-hi:#8a2a3a; --pearl-a:#ffffff; --pearl-b:#e3dcd3; --pearl-ink:#3a2a2e;
+  --gold:#d6a334; --bass:#2f62c9; --chord:#2f7d5b;
+  --display:"Bricolage Grotesque","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141012; --surface:#1f191c; --ink:#f2eaee; --muted:#a3959c; --line:#3a2f34;
+    --panel:#4a1520; --panel-hi:#6a2030; --pearl-a:#efeae4; --pearl-b:#bdb4aa; --pearl-ink:#2b1f22;
+    --gold:#f0c050; --bass:#6c97ff; --chord:#4fc08e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141012; --surface:#1f191c; --ink:#f2eaee; --muted:#a3959c; --line:#3a2f34;
+  --panel:#4a1520; --panel-hi:#6a2030; --pearl-a:#efeae4; --pearl-b:#bdb4aa; --pearl-ink:#2b1f22;
+  --gold:#f0c050; --bass:#6c97ff; --chord:#4fc08e;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);display:flex;flex-direction:column;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.app{flex:1;min-height:0;display:flex;flex-direction:column;max-width:640px;width:100%;margin:0 auto;padding:10px 10px 8px;gap:8px}
+
+.read{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:0 4px}
+.chord{font-family:var(--display);font-weight:800;font-size:clamp(2rem,9vw,2.8rem);line-height:.95;letter-spacing:-.02em;min-height:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notes{font-size:.8rem;color:var(--muted);text-align:right;min-height:1.2em}
+.kb{position:relative;height:44px;display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--line);flex:0 0 auto}
+.wk{flex:1;background:var(--surface);border-right:1px solid var(--line);position:relative}
+.wk:last-child{border-right:0}
+.bk{position:absolute;top:0;height:60%;background:#2a2226;border-radius:0 0 3px 3px;z-index:2}
+.wk.b,.bk.b{background:var(--bass)}
+.wk.c,.bk.c{background:var(--chord)}
+.wk.b.c,.bk.b.c{background:linear-gradient(var(--bass) 50%,var(--chord) 50%)}
+.kbl{position:absolute;bottom:2px;left:0;right:0;text-align:center;font:600 .55rem var(--display);color:var(--muted)}
+
+.heads{display:grid;grid-template-columns:44px repeat(var(--rows),1fr);gap:6px;padding:0 10px 0 8px}
+.heads span{text-align:center;font-size:.68rem;font-weight:600;color:var(--muted);line-height:1.2}
+.panel{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;background:radial-gradient(120% 80% at 30% 0%,var(--panel-hi),var(--panel));border-radius:20px;padding:12px 10px 12px 8px;box-shadow:inset 0 2px 10px rgba(0,0,0,.35);overscroll-behavior:contain}
+.grid{display:grid;grid-template-columns:44px repeat(var(--rows),1fr);row-gap:6px;column-gap:6px;padding-bottom:calc(var(--rows) * 7px)}
+.cn{display:flex;align-items:center;justify-content:center;font:700 .9rem var(--display);color:#f3e3e6;opacity:.8}
+.cn.c{opacity:1;color:var(--gold)}
+.btn{aspect-ratio:1;max-height:56px;justify-self:center;width:100%;max-width:56px;border-radius:50%;border:0;padding:0;cursor:pointer;touch-action:none;
+  background:radial-gradient(circle at 35% 30%,var(--pearl-a),var(--pearl-b) 70%);color:var(--pearl-ink);
+  box-shadow:0 3px 0 rgba(0,0,0,.35),inset 0 -2px 3px rgba(0,0,0,.15);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--display);line-height:1;position:relative;transition:transform .05s}
+.btn b{font-weight:800;font-size:.82rem}
+.btn small{font-size:.56rem;font-weight:600;opacity:.7;margin-top:1px}
+.btn.dim::after{content:"";position:absolute;width:38%;height:38%;border-radius:50%;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);background:rgba(0,0,0,.06)}
+.btn.mark::after{content:"";position:absolute;bottom:14%;width:5px;height:5px;border-radius:50%;background:rgba(0,0,0,.35)}
+.btn.on{background:radial-gradient(circle at 35% 30%,#fff3d0,var(--gold) 75%);transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.btn.nolabel b,.btn.nolabel small{visibility:hidden}
+.panel{touch-action:none;position:relative}
+.wrap{position:relative;flex:1;min-height:0;display:flex}
+.wrap .panel{flex:1}
+.edge{position:absolute;left:0;right:0;height:16%;pointer-events:none;opacity:0;transition:opacity .15s;z-index:3;border-radius:20px}
+.edge.top{top:0;background:linear-gradient(rgba(255,255,255,.28),transparent)}
+.edge.bot{bottom:0;background:linear-gradient(transparent,rgba(255,255,255,.28))}
+.edge.on{opacity:1}
+.btn.wait{box-shadow:0 0 0 3px rgba(255,255,255,.55),0 3px 0 rgba(0,0,0,.35)}
+.mode{flex:0 0 auto;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:6px;padding:0 12px;font-size:.82rem;font-weight:600}
+.mode svg{width:18px;height:18px}
+.mode.scroll{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.foot{display:flex;align-items:center;gap:10px}
+.ib{flex:0 0 auto;width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.ib svg{width:20px;height:20px}
+.tip{flex:1;font-size:.72rem;color:var(--muted);line-height:1.4}
+
+dialog{border:0;padding:0;background:transparent;max-width:none;width:100%;max-height:100%;margin:0;inset:auto 0 0 0;position:fixed}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.sheet{background:var(--surface);color:var(--ink);border-radius:22px 22px 0 0;max-width:560px;margin:0 auto;padding:16px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto}
+.sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:1.3rem;margin:0}
+.close{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:7px 16px;font-weight:600;cursor:pointer}
+.grp{padding:11px 0;border-top:1px solid var(--line)}
+.grp:first-of-type{border-top:0}
+.grp h3{font-size:.8rem;font-weight:600;color:var(--muted);margin:0 0 8px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:8px 10px;font-size:.88rem;font-weight:500;cursor:pointer;min-width:52px}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.tg{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0;font-size:.92rem;cursor:pointer}
+.tg small{display:block;color:var(--muted);font-size:.75rem}
+.tg input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:0 0 auto;cursor:pointer;margin:0}
+.tg input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.tg input:checked{background:var(--gold)}
+.tg input:checked::after{left:21px}
+@media (prefers-reduced-motion:reduce){.btn,.tg input::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="read">
+    <div class="chord" id="chord">–</div>
+    <div class="notes" id="notes">버튼을 눌러 보세요</div>
+  </div>
+  <div class="kb" id="kb" aria-hidden="true"></div>
+  <div class="heads" id="heads"></div>
+  <div class="wrap"><div class="panel" id="panel"><div class="grid" id="grid"></div></div><div class="edge top" id="edgeT"></div><div class="edge bot" id="edgeB"></div></div>
+  <div class="foot">
+    <button class="ib" id="gear" aria-label="환경설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <div class="tip" id="tip"></div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="sheet">
+    <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+    <div class="grp"><h3>베이스 크기</h3><div class="seg" id="sSize"></div></div>
+    <div class="grp"><h3>터치 방식</h3><div class="seg" id="sTouch"></div></div>
+    <div class="grp" id="gHold"><h3>소리 나기까지 누르는 시간</h3><div class="seg" id="sHold"></div></div>
+    <div class="grp" id="gSpeed"><h3>가장자리 스크롤 속도</h3><div class="seg" id="sSpeed"></div></div>
+    <div class="grp"><h3>버튼 이름</h3><div class="seg" id="sLabel"></div></div>
+    <div class="grp">
+      <label class="tg"><span>좌우 반전<small>끄면 바람통 쪽(카운터 베이스)이 왼쪽</small></span><input type="checkbox" id="sFlip"></label>
+      <label class="tg"><span>뮤제트 떨림<small>리드 두 개를 살짝 어긋나게 해서 아코디언 특유의 떨림을 냄</small></span><input type="checkbox" id="sMus"></label>
+      <label class="tg"><span>베이스에 옥타브 더하기<small>베이스 버튼에 한 옥타브 위 음을 함께 울림</small></span><input type="checkbox" id="sOct"></label>
+    </div>
+    <div class="grp"><h3>기준음</h3><div class="seg" id="sTune"></div></div>
+  </div>
+</dialog>
+
+<script>
+const ALL=[["F♭",4],["C♭",11],["G♭",6],["D♭",1],["A♭",8],["E♭",3],["B♭",10],["F",5],["C",0],["G",7],["D",2],["A",9],["E",4],["B",11],["F♯",6],["C♯",1],["G♯",8],["D♯",3],["A♯",10],["E♯",5]];
+const SIZES={120:{cols:[0,20],rows:6},96:{cols:[2,18],rows:6},72:{cols:[3,15],rows:6},48:{cols:[3,15],rows:4}};
+const ROWS=[
+  {k:"cb",head:"카운터",short:"",iv:[4],type:"bass"},
+  {k:"b",head:"베이스",short:"",iv:[0],type:"bass"},
+  {k:"M",head:"장",short:"M",iv:[0,4,7],type:"chord",suf:""},
+  {k:"m",head:"단",short:"m",iv:[0,3,7],type:"chord",suf:"m"},
+  {k:"7",head:"7",short:"7",iv:[0,4,10],type:"chord",suf:"7"},
+  {k:"d",head:"감",short:"dim",iv:[0,3,9],type:"chord",suf:"dim"},
+];
+const NM=["C","C♯","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
+const SP=["도","도♯","레","미♭","미","파","파♯","솔","라♭","라","시♭","시"];
+const DEF={touch:"instant",hold:220,speed:900,size:72,label:"all",flip:false,mus:true,oct:true,a4:440};
+let S={...DEF};
+try{const v=JSON.parse(localStorage.getItem("stradella")||"null");if(v)S={...DEF,...v};}catch(e){}
+const save=()=>{try{localStorage.setItem("stradella",JSON.stringify(S));}catch(e){}};
+
+/* pitch: bass reeds E2–D♯3, chord reeds G3–F♯4 */
+const bassMidi=pc=>40+((pc-4+12)%12);
+const chordMidi=pc=>55+((pc-7+12)%12);
+const LOW=40, HIGH=66;
+
+/* ---------- audio ---------- */
+let ac=null, master, comp;
+function initAudio(){
+  if(ac){if(ac.state==="suspended")ac.resume();return;}
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  comp=ac.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;
+  master=ac.createGain();master.gain.value=.5;master.connect(comp);comp.connect(ac.destination);
+}
+const hz=m=>S.a4*Math.pow(2,(m-69)/12);
+function voice(midis,isBass){
+  const t=ac.currentTime, out=ac.createGain();out.gain.value=0;
+  const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=isBass?900:2600;lp.Q.value=.8;
+  lp.connect(out);out.connect(master);
+  const oscs=[];
+  midis.forEach(([m,amp])=>{
+    const det=S.mus?[-7,7]:[0];
+    det.forEach(c=>{
+      const o=ac.createOscillator();o.type=isBass?"sawtooth":"square";o.frequency.value=hz(m);o.detune.value=c;
+      const g=ac.createGain();g.gain.value=amp*(isBass?.22:.07)/det.length;
+      o.connect(g);g.connect(lp);o.start(t);oscs.push(o);
+    });
+  });
+  out.gain.setTargetAtTime(1,t,.018);
+  return {stop(){const t2=ac.currentTime;out.gain.cancelScheduledValues(t2);out.gain.setTargetAtTime(0,t2,.05);oscs.forEach(o=>o.stop(t2+.4));}};
+}
+
+/* ---------- keyboard strip ---------- */
+const kb=document.getElementById("kb");
+const isBlack=m=>[1,3,6,8,10].includes(m%12);
+function buildKb(){
+  kb.innerHTML="";
+  const whites=[];for(let m=LOW;m<=HIGH;m++) if(!isBlack(m)) whites.push(m);
+  const w=100/whites.length;
+  whites.forEach(m=>{const d=document.createElement("div");d.className="wk";d.dataset.m=m;if(m%12===0)d.innerHTML=`<span class="kbl">C${Math.floor(m/12)-1}</span>`;kb.appendChild(d);});
+  for(let m=LOW;m<=HIGH;m++){ if(!isBlack(m))continue;
+    const i=whites.indexOf(m-1)+1;const d=document.createElement("div");d.className="bk";d.dataset.m=m;
+    d.style.left=`calc(${i*w}% - ${w*.3}%)`;d.style.width=`${w*.6}%`;kb.appendChild(d);}
+}
+
+/* ---------- grid ---------- */
+const grid=document.getElementById("grid"), heads=document.getElementById("heads"), panel=document.getElementById("panel");
+const held=new Map(); // pointerId -> {btn, info, voice}
+function build(){
+  const sz=SIZES[S.size], cols=ALL.slice(sz.cols[0],sz.cols[1]), rows=ROWS.slice(0,sz.rows);
+  const order=S.flip?[...rows].reverse():rows;
+  document.documentElement.style.setProperty("--rows",rows.length);
+  heads.innerHTML="<span></span>"+order.map(r=>`<span>${r.head}</span>`).join("");
+  grid.innerHTML="";
+  cols.forEach(([name,pc],ci)=>{
+    const cn=document.createElement("div");cn.className="cn"+(pc===0&&name==="C"?" c":"");cn.textContent=name;grid.appendChild(cn);
+    order.forEach((r,ri)=>{
+      const b=document.createElement("button");b.className="btn";
+      const rootPc=(pc+(r.k==="cb"?4:0))%12;
+      let label,sub,title;
+      if(r.k==="cb"){label=NM[rootPc];sub="카운터";title=`${NM[rootPc]} (카운터 베이스, ${name}의 장3도 위)`;}
+      else if(r.k==="b"){label=name;sub="베이스";title=`${name} 베이스`;}
+      else {label=name+(r.suf||"");sub=r.short;title=`${name}${r.suf} 화음`;}
+      b.innerHTML=`<b>${r.type==="chord"?name:label}</b><small>${r.type==="chord"?(r.suf||"M"):sub}</small>`;
+      if(S.label==="none"||(S.label==="bass"&&r.type==="chord")) b.classList.add("nolabel");
+      if(r.k==="b"&&name==="C") b.classList.add("dim");
+      if(r.k==="cb"&&(name==="C"||name==="E")) b.classList.add("mark");
+      b.style.transform=`translateY(${ri*7}px)`;
+      b.setAttribute("aria-label",title);
+      const notes=r.iv.map(iv=>(pc+iv)%12);
+      const info={title:r.type==="chord"?`${name}${r.suf}`:(r.k==="cb"?`${NM[rootPc]} 카운터`:`${name} 베이스`),
+        type:r.type,pcs:r.type==="chord"?notes:[rootPc]};
+      b._info=info;
+      b.addEventListener("contextmenu",e=>e.preventDefault());
+      grid.appendChild(b);
+    });
+  });
+  // start scrolled to C
+  requestAnimationFrame(()=>{const c=grid.querySelector(".cn.c");if(c) panel.scrollTop=c.offsetTop-panel.clientHeight/2+c.offsetHeight/2;});
+}
+
+/* ---------- readout ---------- */
+let lastTitle="";
+function refresh(){
+  const hs=[...held.values()];
+  kb.querySelectorAll(".wk,.bk").forEach(k=>k.classList.remove("b","c"));
+  hs.forEach(h=>h.midis.forEach(([m])=>{const k=kb.querySelector(`[data-m="${m}"]`);if(k)k.classList.add(h.info.type==="bass"?"b":"c");}));
+  const chordEl=document.getElementById("chord"), notesEl=document.getElementById("notes");
+  if(!hs.length){chordEl.style.opacity=.35;return;}
+  chordEl.style.opacity=1;
+  const bass=hs.filter(h=>h.info.type==="bass"), ch=hs.filter(h=>h.info.type==="chord");
+  let title="";
+  if(ch.length&&bass.length) title=`${ch[ch.length-1].info.title} / ${NM[bass[bass.length-1].info.pcs[0]]}`;
+  else title=hs[hs.length-1].info.title;
+  chordEl.textContent=title;
+  const pcs=[...new Set(hs.flatMap(h=>h.info.pcs))];
+  notesEl.textContent=pcs.map(p=>`${NM[p]} ${SP[p]}`).join(" · ");
+}
+
+/* ---------- settings ---------- */
+const dlg=document.getElementById("dlg");
+document.getElementById("gear").onclick=()=>{renderSettings();dlg.showModal();};
+document.getElementById("closeBtn").onclick=()=>dlg.close();
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+function seg(id,opts,key){
+  const box=document.getElementById(id);box.innerHTML="";
+  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));
+    b.onclick=()=>{S[key]=v;save();build();renderSettings();};box.appendChild(b);});
+}
+function renderSettings(){
+  seg("sSize",[[120,"120"],[96,"96"],[72,"72"],[48,"48"]],"size");
+  seg("sTouch",[["instant","바로 소리 + 끌면 스크롤"],["long","길게 눌러야 소리"],["sweep","훑기"]],"touch");
+  seg("sHold",[[150,"짧게"],[220,"보통"],[350,"길게"]],"hold");
+  document.getElementById("gHold").hidden=S.touch!=="long";document.getElementById("gSpeed").hidden=S.touch!=="sweep";setTip();
+  seg("sSpeed",[[500,"느리게"],[900,"보통"],[1600,"빠르게"]],"speed");
+  seg("sLabel",[["all","모두 표시"],["bass","베이스만"],["none","숨기기"]],"label");
+  seg("sTune",[[440,"A4 = 440"],[442,"A4 = 442"]],"a4");
+  [["sFlip","flip"],["sMus","mus"],["sOct","oct"]].forEach(([id,k])=>{const el=document.getElementById(id);el.checked=S[k];el.onchange=()=>{S[k]=el.checked;save();build();};});
+}
+/* ---------- touch ---------- */
+/* modes: "instant" = sound at once, dragging scrolls while it keeps sounding
+          "long"    = short drags only scroll, hold still a moment to sound
+          "sweep"   = slide across buttons, scroll at the edges */
+const edgeT=document.getElementById("edgeT"), edgeB=document.getElementById("edgeB");
+const ptrs=new Map(); // pointerId -> {x,y,y0,st0,timer,moved,last,vy}
+let owner=null, inertia=0;
+function hit(x,y){const el=document.elementFromPoint(x,y);return el&&el.closest?el.closest(".btn"):null;}
+function press(id,b){
+  const h=held.get(id);
+  if(h&&h.b===b) return;
+  if(h) release(id);
+  if(!b) return;
+  const info=b._info;
+  const midis=info.type==="bass"?[[bassMidi(info.pcs[0]),1]].concat(S.oct?[[bassMidi(info.pcs[0])+12,.45]]:[]):info.pcs.map(p=>[chordMidi(p),1]);
+  held.set(id,{b,info,midis,v:voice(midis,info.type==="bass")});
+  b.classList.add("on");refresh();
+}
+function release(id){
+  const h=held.get(id); if(!h) return;
+  h.v.stop();held.delete(id);
+  if(![...held.values()].some(x=>x.b===h.b)) h.b.classList.remove("on");
+  refresh();
+}
+panel.addEventListener("pointerdown",e=>{
+  e.preventDefault();initAudio();
+  cancelAnimationFrame(inertia);inertia=0;
+  panel.setPointerCapture(e.pointerId);
+  const p={x:e.clientX,y:e.clientY,y0:e.clientY,st0:panel.scrollTop,moved:false,last:performance.now(),vy:0,timer:0};
+  ptrs.set(e.pointerId,p);
+  if(owner===null) owner=e.pointerId;
+  const b=hit(e.clientX,e.clientY);
+  if(S.touch==="instant"||S.touch==="sweep") press(e.pointerId,b);
+  else if(b){
+    b.classList.add("wait");
+    p.timer=setTimeout(()=>{b.classList.remove("wait");p.timer=0;if(!p.moved&&ptrs.has(e.pointerId))press(e.pointerId,b);},S.hold);
+    p.waitBtn=b;
+  }
+  if(S.touch==="sweep") edgeLoop();
+});
+panel.addEventListener("pointermove",e=>{
+  const p=ptrs.get(e.pointerId); if(!p) return;
+  const now=performance.now(), dy=e.clientY-p.y;
+  p.x=e.clientX;p.y=e.clientY;
+  if(S.touch==="sweep"){press(e.pointerId,hit(p.x,p.y));return;}
+  if(Math.abs(p.y-p.y0)>8&&!p.moved){
+    p.moved=true;
+    if(p.timer){clearTimeout(p.timer);p.timer=0;if(p.waitBtn)p.waitBtn.classList.remove("wait");}
+  }
+  if(e.pointerId===owner&&p.moved){
+    panel.scrollTop-=dy;
+    const dt=Math.max(1,now-p.last);p.vy=p.vy*.6+(dy/dt)*.4;
+  }
+  p.last=now;
+});
+const endP=e=>{
+  const p=ptrs.get(e.pointerId); if(!p) return;
+  if(p.timer){clearTimeout(p.timer);if(p.waitBtn)p.waitBtn.classList.remove("wait");}
+  ptrs.delete(e.pointerId); release(e.pointerId);
+  if(e.pointerId===owner){
+    owner=ptrs.size?ptrs.keys().next().value:null;
+    if(owner!==null){const q=ptrs.get(owner);q.y0=q.y-9;q.moved=true;}
+    if(S.touch!=="sweep"&&p.moved&&Math.abs(p.vy)>.15&&performance.now()-p.last<80) fling(p.vy);
+  }
+};
+panel.addEventListener("pointerup",endP);panel.addEventListener("pointercancel",endP);
+panel.addEventListener("lostpointercapture",endP);
+function fling(v){ // px per ms
+  let last=performance.now();
+  const step=t=>{const dt=t-last;last=t;panel.scrollTop-=v*dt;v*=Math.pow(.995,dt);
+    if(Math.abs(v)>.02&&!ptrs.size) inertia=requestAnimationFrame(step); else inertia=0;};
+  inertia=requestAnimationFrame(step);
+}
+
+let edgeRaf=0, lastT=0;
+function edgeLoop(){
+  if(edgeRaf) return;
+  lastT=performance.now();
+  const step=t=>{
+    const dt=Math.min(.05,(t-lastT)/1000);lastT=t;
+    if(!ptrs.size||S.touch!=="sweep"){edgeRaf=0;edgeT.classList.remove("on");edgeB.classList.remove("on");return;}
+    const r=panel.getBoundingClientRect(), zone=r.height*.16;
+    let v=0;
+    ptrs.forEach(p=>{
+      if(p.y<r.top+zone) v=Math.min(v,-(r.top+zone-p.y)/zone);
+      else if(p.y>r.bottom-zone) v=Math.max(v,(p.y-(r.bottom-zone))/zone);
+    });
+    edgeT.classList.toggle("on",v<0&&panel.scrollTop>0);
+    edgeB.classList.toggle("on",v>0&&panel.scrollTop<panel.scrollHeight-panel.clientHeight-1);
+    if(v){panel.scrollTop+=v*Math.abs(v)*S.speed*dt;ptrs.forEach((p,id)=>press(id,hit(p.x,p.y)));}
+    edgeRaf=requestAnimationFrame(step);
+  };
+  edgeRaf=requestAnimationFrame(step);
+}
+const TIPS={
+  instant:"누르면 바로 소리가 나요. 누른 채로 위아래로 끌면 소리를 유지한 채 화면이 스크롤돼요.",
+  long:"짧게 끌면 스크롤만 돼요. 버튼을 잠깐 누르고 있으면 소리가 나고, 그 상태로 끌어도 계속 울려요.",
+  sweep:"버튼 위를 훑으면 지나가는 버튼마다 소리가 나요. 위아래 끝으로 가져가면 스크롤돼요."};
+function setTip(){document.getElementById("tip").textContent=TIPS[S.touch];}
+
+setTip();buildKb();build();refresh();
+</script>
+</body>
+</html>

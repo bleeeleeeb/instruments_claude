@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>트럼펫 연주 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ece7dd; --surface:#faf7f1; --ink:#1f1a12; --muted:#6e6556; --line:#d6cdbd;
+  --brass:#c08a1e; --brass-hi:#e7b64a; --brass-lo:#8d6312; --lip:#c4473a; --valve:#3b6fd1;
+  --display:"Bricolage Grotesque","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16130e; --surface:#211c15; --ink:#f3ece0; --muted:#a59a87; --line:#3a3226;
+    --brass:#e0aa40; --brass-hi:#f6cd6e; --brass-lo:#a77a26; --lip:#f07264; --valve:#78a2ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16130e; --surface:#211c15; --ink:#f3ece0; --muted:#a59a87; --line:#3a3226;
+  --brass:#e0aa40; --brass-hi:#f6cd6e; --brass-lo:#a77a26; --lip:#f07264; --valve:#78a2ff;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-areas:"top top top" "left center right" "bottom bottom bottom";grid-template-columns:var(--cl,0px) minmax(0,1fr) var(--cr,0px);grid-template-rows:var(--rt,0px) minmax(0,1fr) var(--rb,0px);gap:10px;
+  padding:8px max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px))}
+body.portrait .app{gap:6px}
+
+/* partial (lip) strip */
+.lips{display:flex;flex-direction:column;gap:5px;min-height:0;touch-action:none;position:relative}
+.lips-head{font-size:.66rem;font-weight:600;color:var(--muted);text-align:center;line-height:1.2}
+.pz{--c:var(--lip);flex:1;min-height:0;border-radius:12px;border:2px solid color-mix(in srgb,var(--c) 55%,transparent);
+  background:color-mix(in srgb,var(--c) 8%,var(--surface));display:flex;align-items:center;justify-content:space-between;padding:0 10px;cursor:pointer}
+.pz b{font-family:var(--display);font-weight:800;font-size:1.15rem;line-height:1}
+.pz small{font:700 .66rem var(--display);color:var(--muted);text-align:right;line-height:1.1}
+.pz.flat small::after{content:" ↓";color:var(--lip)}
+.pz.on{background:var(--c);border-color:var(--c);color:#fff}
+.pz.on small{color:#fff}
+body.portrait .pz{padding:0 6px}
+body.portrait .pz b{font-size:.95rem}
+
+.lips.tiltmode{gap:0;border-radius:18px;border:2.5px solid var(--lip);background:color-mix(in srgb,var(--lip) 8%,var(--surface));padding:6px;cursor:pointer}
+.lips.tiltmode.on{background:color-mix(in srgb,var(--lip) 22%,var(--surface))}
+.lips.tiltmode .pz{pointer-events:none;border-color:transparent;background:transparent;border-radius:9px}
+.lips.tiltmode .pz.cur{background:color-mix(in srgb,var(--lip) 30%,transparent);border-color:var(--lip)}
+.lips.tiltmode .pz.cur.on{background:var(--lip);color:#fff}
+.lips.tiltmode .pz.cur.on small{color:#fff}
+.mouthlbl{font:800 .9rem var(--display);color:var(--lip);text-align:center;padding:4px 0 2px}
+.edge{display:flex;min-width:0;min-height:0;align-items:center;justify-content:center}
+.edge:empty{display:none}
+.edge.h .lips,.edge.h .valves{flex-direction:row}
+.edge.h .lips-head,.edge.h .mouthlbl{writing-mode:vertical-rl;padding:0 2px;font-size:.7rem}
+.edge.h .pz{flex-direction:column;justify-content:center;gap:2px;padding:4px 2px}
+.edge.h .pz small{text-align:center}
+.edge.h .vb{border-radius:30% / 50%}
+.vb.combo{background:radial-gradient(circle at 40% 30%,#fbe7b0,var(--brass-hi) 60%,var(--brass))}
+.vb.combo b{font-size:1.3rem}
+.readout.blowpad{cursor:pointer;touch-action:none;border-radius:18px;border:2px dashed color-mix(in srgb,var(--lip) 50%,transparent)}
+.readout.blowpad.on{background:color-mix(in srgb,var(--lip) 12%,transparent)}
+/* row layout: controls as horizontal bars */
+.app.rows{grid-template-columns:1fr !important;grid-template-rows:minmax(0,1fr) var(--rowA) var(--rowB)}
+.app.rows .lips,.app.rows .valves{flex-direction:row}
+.app.rows .lips-head,.app.rows .mouthlbl{writing-mode:vertical-rl;padding:0 2px;font-size:.7rem}
+.app.rows .pz{flex-direction:column;justify-content:center;gap:2px;padding:4px 2px}
+.app.rows .pz small{text-align:center}
+.app.rows .vb{border-radius:30% / 50%}
+.slot{display:flex;min-width:0;min-height:0;align-items:center;justify-content:center}
+.slot>*{flex:0 0 auto}
+/* valves */
+.valves{display:flex;flex-direction:column;gap:8px;min-height:0;touch-action:none}
+.vb{flex:1;min-height:0;border-radius:50% / 30%;border:0;cursor:pointer;
+  background:radial-gradient(circle at 40% 30%,var(--brass-hi),var(--brass) 60%,var(--brass-lo));
+  box-shadow:0 6px 0 var(--brass-lo),inset 0 -4px 8px rgba(0,0,0,.18);
+  color:#2a1d06;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:transform .05s,box-shadow .05s}
+.vb b{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1}
+.vb small{font-size:.66rem;font-weight:600;opacity:.75}
+.vb.on{transform:translateY(5px);box-shadow:0 1px 0 var(--brass-lo),inset 0 3px 8px rgba(0,0,0,.35);
+  background:radial-gradient(circle at 40% 30%,#fff1c6,var(--brass-hi) 60%,var(--brass))}
+body.portrait .vb b{font-size:1.5rem}
+
+/* center */
+.center{display:flex;flex-direction:column;min-width:0;min-height:0}
+.readout{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0}
+.note{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,13vh,5rem);line-height:.9;letter-spacing:-.03em;color:var(--cur,var(--ink))}
+.tech{font-weight:600;font-size:.92rem;margin-top:6px;min-height:1.3em}
+.hz{font-size:.74rem;color:var(--muted);min-height:1.2em}
+.alts{font-size:.74rem;color:var(--muted);min-height:1.2em;margin-top:4px;max-width:34ch;line-height:1.4}
+.alts b{color:var(--ink);font-weight:600}
+.horn{width:100%;max-width:340px;height:auto;margin:4px auto 0;display:block}
+.bar{display:flex;align-items:center;gap:8px;padding-top:4px}
+.ib{flex:0 0 auto;height:36px;min-width:36px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 10px;font-size:.78rem;font-weight:600}
+.ib svg{width:19px;height:19px}
+.status{flex:1;min-width:0;font-size:.7rem;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+dialog{border:0;padding:0;background:transparent;max-width:none;width:100%;max-height:100%;margin:0;inset:auto 0 0 0;position:fixed}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.sheet{background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;max-width:640px;margin:0 auto;padding:14px 18px calc(16px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
+.sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:1.25rem;margin:0}
+.close{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:7px 16px;font-weight:600;cursor:pointer}
+.grp{padding:10px 0;border-top:1px solid var(--line)}
+.grp:first-of-type{border-top:0}
+.grp[hidden]{display:none}
+.grp h3{font-size:.78rem;font-weight:600;color:var(--muted);margin:0 0 7px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:11px;padding:7px 9px;font-size:.86rem;font-weight:500;cursor:pointer;min-width:46px}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+@media (max-width:560px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="edge" id="eTop" style="grid-area:top"></div>
+  <div class="edge" id="eLeft" style="grid-area:left"></div>
+  <div class="center" style="grid-area:center">
+    <div class="readout">
+      <div class="note" id="note">–</div>
+      <div class="tech" id="tech">배음 칸을 누르면 소리가 나요</div>
+      <div class="hz" id="hz"></div>
+      <div class="alts" id="alts"></div>
+      <svg class="horn" id="horn" viewBox="0 0 340 90" aria-hidden="true"></svg>
+    </div>
+    <div class="bar">
+      <button class="ib" id="gear" aria-label="환경설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <div class="status" id="status"></div>
+      <button class="ib" id="center" hidden>기준 맞추기</button>
+    </div>
+  </div>
+  <div class="edge" id="eRight" style="grid-area:right"></div>
+  <div class="edge" id="eBottom" style="grid-area:bottom"></div>
+</div>
+
+<dialog id="dlg">
+  <div class="sheet">
+    <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+    <div class="cols">
+      <div>
+        <div class="grp"><h3>밸브 버튼 위치 (화면 가장자리)</h3><div class="seg" id="sVEdge"></div><h3 style="margin-top:10px">입 버튼 위치 (남은 가장자리)</h3><div class="seg" id="sMEdge"></div></div>
+        <div class="grp"><h3>밸브 버튼 개수</h3><div class="seg" id="sVMode"></div></div>
+        <div class="grp"><h3>밸브 버튼 길이</h3><div class="seg" id="sVLen"></div><h3 style="margin-top:10px">입 버튼 길이</h3><div class="seg" id="sLLen"></div></div>
+        <div class="grp"><h3>밸브 순서 (위에서 아래로)</h3><div class="seg" id="sOrder"></div></div>
+        <div class="grp"><h3>입 배음 조절</h3><div class="seg" id="sLipMode"></div></div>
+        <div class="grp" id="gTilt"><h3>기울기 방향</h3><div class="seg" id="sTilt"></div><h3 style="margin-top:10px">감도 (배음 하나당 각도)</h3><div class="seg" id="sDeg"></div><h3 style="margin-top:10px">방향</h3><div class="seg" id="sInv"></div></div>
+        <div class="grp"><h3>배음 칸 범위</h3><div class="seg" id="sRange"></div><h3 style="margin-top:10px">7배음</h3><div class="seg" id="sNo7"></div></div>
+        <div class="grp"><h3>배음 칸 이름</h3><div class="seg" id="sLabel"></div></div>
+      </div>
+      <div>
+        <div class="grp"><h3>트럼펫 종류</h3><div class="seg" id="sKey"></div></div>
+        <div class="grp"><h3>표시 음</h3><div class="seg" id="sShow"></div></div>
+        <div class="grp"><h3>비브라토</h3><div class="seg" id="sVib"></div></div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* written pitch: partial n of the open horn, measured from written C3; 7th partial is ~31 cents flat */
+const PART={1:0,2:12,3:19,4:24,5:28,6:31,7:34,8:36,9:38,10:40};
+const CENTS={5:-14,7:-31};
+const DROP={1:2,2:1,3:3};
+const NAMES=["C","C♯","D","E♭","E","F","F♯","G","G♯","A","B♭","B"];
+const SOL=["도","도♯","레","미♭","미","파","파♯","솔","솔♯","라","시♭","시"];
+const nm=m=>NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1);
+const DEF={vEdge:"right",mEdge:"left",vMode:3,layout:"auto",no7:false,vLen:100,lLen:100,order:"123",lipMode:"touch",tilt:"pitch",deg:8,inv:false,side:"right",range:"std",label:"note",key:"bb",show:"written",vib:6};
+let S={...DEF};
+try{const v=JSON.parse(localStorage.getItem("trumpet-sim")||"null");if(v)S={...DEF,...v};}catch(e){}
+const save=()=>{try{localStorage.setItem("trumpet-sim",JSON.stringify(S));}catch(e){}};
+const TRANS=()=>S.key==="bb"?-2:0;
+const partials=()=>(S.range==="ext"?[1,2,3,4,5,6,7,8,9,10]:[2,3,4,5,6,7,8]).filter(n=>!(S.no7&&n===7));
+const comboName=v=>v.length?v.join("·"):"개방";
+
+/* standard fingering table (written): best combo/partial for each note */
+const STD={};
+(function(){
+  const combos=[[],[2],[1],[1,2],[2,3],[1,3],[1,2,3]];
+  for(const n of [2,3,4,5,6,8,9,10,1])for(const c of combos){
+    const m=48+PART[n]-c.reduce((a,v)=>a+DROP[v],0);
+    if(!STD[m]) STD[m]={n,c};
+  }
+})();
+function altsFor(m){
+  const combos=[[],[2],[1],[1,2],[3],[2,3],[1,3],[1,2,3]], out=[];
+  for(const n of partials())for(const c of combos){
+    if(48+PART[n]-c.reduce((a,v)=>a+DROP[v],0)===m) out.push({n,c});
+  }
+  return out;
+}
+
+/* ---------- layout ---------- */
+let lipsEl, valvesEl;
+const EDGES={top:"eTop",bottom:"eBottom",left:"eLeft",right:"eRight"};
+const OPP={top:"bottom",bottom:"top",left:"right",right:"left"};
+const VSETS={3:[[1],[2],[3]],5:[[1],[2],[3],[2,3],[1,3]],6:[[1],[2],[3],[2,3],[1,3],[1,2,3]]};
+const DROPLBL={1:"반음",2:"온음",3:"온음 반",4:"2음",5:"2음 반",6:"3음"};
+function mouthEdge(){
+  let m=S.mEdge;
+  if(m==="none"&&S.lipMode!=="tilt") m=OPP[S.vEdge];
+  if(m===S.vEdge) m=OPP[S.vEdge];
+  return m;
+}
+const rowsNow=()=>S.vEdge==="top"||S.vEdge==="bottom";
+function build(){
+  Object.values(EDGES).forEach(id=>{const e=document.getElementById(id);e.innerHTML="";e.className="edge";});
+  const tiltMode=S.lipMode==="tilt", mEdge=mouthEdge(), vEdge=S.vEdge, app=document.getElementById("app");
+  const horiz=e=>e==="top"||e==="bottom";
+  // lips / mouth
+  lipsEl=null;
+  if(mEdge!=="none"){
+    lipsEl=document.createElement("div");lipsEl.className="lips";
+    const head=document.createElement("div");head.className="lips-head";head.textContent="입술 · 배음";
+    lipsEl.appendChild(head);
+    if(tiltMode){lipsEl.classList.add("tiltmode");lipsEl.dataset.ctl="mouth";head.className="mouthlbl";head.textContent="불기 · 기울여 배음";}
+    (horiz(mEdge)?partials():partials().slice().reverse()).forEach(n=>{
+      const z=document.createElement("div");z.className="pz"+(n===7?" flat":"");if(!tiltMode)z.dataset.ctl="p"+n;z.dataset.n=n;
+      z.innerHTML=`<b>${n}</b><small></small>`;z.setAttribute("aria-label",`${n}배음`);
+      lipsEl.appendChild(z);
+    });
+  }
+  // valves (single valves plus optional combination buttons)
+  valvesEl=document.createElement("div");valvesEl.className="valves";
+  let set=VSETS[S.vMode]||VSETS[3]; if(S.order==="321") set=set.slice().reverse();
+  set.forEach(vs=>{
+    const b=document.createElement("div");b.className="vb"+(vs.length>1?" combo":"");b.dataset.ctl="v"+vs.join("");b.dataset.v=vs.join(",");
+    const d=vs.reduce((a,v)=>a+DROP[v],0);
+    b.innerHTML=`<b>${vs.join("·")}</b><small>${DROPLBL[d]}</small>`;b.setAttribute("aria-label",`밸브 ${vs.join(", ")}`);
+    valvesEl.appendChild(b);
+  });
+  // place on edges
+  const side="minmax(96px,24%)", bar="clamp(80px,19vh,160px)";
+  const sizes={top:"0px",bottom:"0px",left:"0px",right:"0px"};
+  const put=(el,edge,len)=>{const slot=document.getElementById(EDGES[edge]);slot.classList.add(horiz(edge)?"h":"v");slot.appendChild(el);
+    el.style.cssText=horiz(edge)?`width:${len}%;height:100%`:`height:${len}%;width:100%`;sizes[edge]=horiz(edge)?bar:side;};
+  put(valvesEl,vEdge,S.vLen);
+  if(lipsEl) put(lipsEl,mEdge,S.lLen);
+  app.style.setProperty("--rt",sizes.top);app.style.setProperty("--rb",sizes.bottom);
+  app.style.setProperty("--cl",sizes.left);app.style.setProperty("--cr",sizes.right);
+  wire(valvesEl);if(lipsEl)wire(lipsEl);
+  // no mouth button: the empty screen area becomes the blow pad
+  const ro=document.querySelector(".readout");
+  if(mEdge==="none"){ro.classList.add("blowpad");ro.dataset.ctl="mouth";if(!ro.dataset.wired){ro.dataset.wired=1;wire(ro);}}
+  else{ro.classList.remove("blowpad","on");delete ro.dataset.ctl;}
+  document.getElementById("center").hidden=!tiltMode;
+  update();
+}
+
+/* ---------- slide-touch over controls ---------- */
+const ptrs=new Map(); let tick=0;
+function ctlAt(x,y){const el=document.elementFromPoint(x,y);return el&&el.closest?el.closest("[data-ctl]"):null;}
+function wire(col){
+  col.addEventListener("pointerdown",e=>{e.preventDefault();initAudio();if(S.lipMode==="tilt")enableSensors();col.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{c:ctlAt(e.clientX,e.clientY),t:++tick});update();});
+  col.addEventListener("pointermove",e=>{const p=ptrs.get(e.pointerId);if(!p)return;const c=ctlAt(e.clientX,e.clientY);if(c!==p.c){p.c=c;p.t=++tick;update();}});
+  const up=e=>{if(ptrs.delete(e.pointerId))update();};
+  col.addEventListener("pointerup",up);col.addEventListener("pointercancel",up);
+  col.addEventListener("contextmenu",e=>e.preventDefault());
+}
+let valves=[], partial=null;
+function readControls(){
+  const on=new Set();let lip=null;
+  let blowing=false;
+  ptrs.forEach(p=>{ if(!p.c) return; on.add(p.c); if(p.c.dataset.ctl==="mouth") blowing=true; if(p.c.dataset.ctl[0]==="p"&&(!lip||p.t>lip.t)) lip=p; });
+  document.querySelectorAll("[data-ctl]").forEach(c=>c.classList.toggle("on",on.has(c)));
+  const vset=new Set();on.forEach(c=>{if(c.dataset.v)c.dataset.v.split(",").forEach(v=>vset.add(+v));});valves=[1,2,3].filter(v=>vset.has(v));
+  if(S.lipMode==="tilt"){
+    if(lipsEl) lipsEl.querySelectorAll(".pz").forEach(z=>{z.classList.toggle("cur",+z.dataset.n===tiltPartial());z.classList.toggle("on",blowing&&+z.dataset.n===tiltPartial());});
+    partial=blowing?tiltPartial():null;
+  } else partial=lip?+lip.c.dataset.n:null;
+}
+
+/* ---------- tilt → partial ---------- */
+let tIdx=null, tBase=null, tBaseIdx=null, lastAng=null, sensorsOn=false, sensorOK=false;
+const rad=Math.PI/180, wrap=d=>((d+540)%360)-180;
+function tiltPartial(){const P=partials();if(tIdx===null)tIdx=P.indexOf(4);return P[Math.max(0,Math.min(P.length-1,tIdx))];}
+function angleFrom(a,b,g){
+  a*=rad;b*=rad;g*=rad;
+  const cA=Math.cos(a),sA=Math.sin(a),cB=Math.cos(b),sB=Math.sin(b),cG=Math.cos(g),sG=Math.sin(g);
+  const vx=cG*sA*sB+cA*sG, vy=sA*sG-cA*cG*sB, vz=cB*cG;      // screen normal in world space
+  if(S.tilt==="yaw") return Math.atan2(vx,vy)/rad;
+  if(S.tilt==="pitch") return Math.atan2(vz,Math.hypot(vx,vy))/rad;   // raise / lower the bell
+  return Math.atan2(-cB*sG,sB)/rad;                                    // steering wheel
+}
+let tPos=null;
+function onOrient(e){
+  if(e.alpha==null&&e.beta==null) return;
+  sensorOK=true;
+  if(S.lipMode!=="tilt") return;
+  const ang=angleFrom(e.alpha||0,e.beta||0,e.gamma||0);lastAng=ang;
+  const P=partials();
+  if(tIdx===null) tIdx=P.indexOf(4);
+  if(tBase===null){tBase=ang;tBaseIdx=tIdx;tPos=tIdx;}
+  const target=tBaseIdx+wrap(ang-tBase)*(S.inv?-1:1)/S.deg;
+  tPos=tPos+(target-tPos)*.4;
+  const r=Math.max(0,Math.min(P.length-1,Math.round(tPos)));
+  if(r!==tIdx&&Math.abs(tPos-tIdx)>.6){tIdx=r;update();}
+}
+async function enableSensors(){
+  if(sensorsOn) return; sensorsOn=true;
+  try{
+    if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
+      const r=await DeviceOrientationEvent.requestPermission(); if(r!=="granted") throw 0;
+    }
+    addEventListener("deviceorientation",onOrient);
+  }catch(e){}
+  setTimeout(()=>{ if(!sensorOK) document.getElementById("status").textContent="기울기 센서를 쓸 수 없어요. https 주소에서 열거나 칸 누르기 방식을 써 주세요."; },1500);
+}
+document.getElementById("center").onclick=()=>{enableSensors();tBase=lastAng;tBaseIdx=partials().indexOf(4);tIdx=tBaseIdx;tPos=tIdx;update();};
+
+/* ---------- display ---------- */
+function horn(){
+  const svg=document.getElementById("horn");
+  let s=`<path d="M10 45 H250 Q290 45 300 30 L330 12 L330 78 L300 60 Q290 45 250 45" fill="none" stroke="var(--brass)" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M60 45 Q60 75 120 75 H210 Q235 75 235 55" fill="none" stroke="var(--brass-lo)" stroke-width="5"/>
+  <rect x="2" y="39" width="16" height="12" rx="3" fill="var(--brass-lo)"/>`;
+  [1,2,3].forEach((v,i)=>{const x=120+i*36, on=valves.includes(v);
+    s+=`<rect x="${x}" y="${on?24:14}" width="22" height="${on?40:50}" rx="6" fill="${on?"var(--valve)":"var(--brass)"}"/>
+    <rect x="${x+5}" y="${on?16:4}" width="12" height="10" rx="3" fill="${on?"var(--valve)":"var(--brass-hi)"}"/>
+    <text x="${x+11}" y="${on?50:44}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-weight="800" font-size="13" fill="${on?"#fff":"#2a1d06"}">${v}</text>`;});
+  svg.innerHTML=s;
+}
+function labelLips(){
+  if(!lipsEl) return;
+  const drop=valves.reduce((a,v)=>a+DROP[v],0);
+  lipsEl.querySelectorAll(".pz").forEach(z=>{
+    const n=+z.dataset.n, m=48+PART[n]-drop+(S.show==="sound"?TRANS():0);
+    z.querySelector("small").textContent=S.label==="note"?nm(m):S.label==="sol"?SOL[((m%12)+12)%12]:"";
+  });
+}
+const NOTE_C=()=>getComputedStyle(document.documentElement);
+
+/* ---------- sound ---------- */
+let ac=null, o1, o2, sat, lp, g, lfoG, sounding=false;
+function initAudio(){
+  if(ac){if(ac.state==="suspended")ac.resume();return;}
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  o1=ac.createOscillator();o1.type="sawtooth";o2=ac.createOscillator();o2.type="sawtooth";o2.detune.value=5;
+  const g1=ac.createGain();g1.gain.value=.5;const g2=ac.createGain();g2.gain.value=.35;
+  sat=ac.createWaveShaper();{const c=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;c[i]=Math.tanh(x*2.2);}sat.curve=c;}
+  const pk=ac.createBiquadFilter();pk.type="peaking";pk.frequency.value=1300;pk.Q.value=1.1;pk.gain.value=6;
+  lp=ac.createBiquadFilter();lp.type="lowpass";lp.Q.value=1.6;lp.frequency.value=1200;
+  g=ac.createGain();g.gain.value=0;
+  const lfo=ac.createOscillator();lfo.frequency.value=5.6;lfoG=ac.createGain();lfoG.gain.value=0;lfo.connect(lfoG);
+  lfoG.connect(o1.detune);lfoG.connect(o2.detune);
+  o1.connect(g1);o2.connect(g2);g1.connect(sat);g2.connect(sat);sat.connect(pk);pk.connect(lp);lp.connect(g);g.connect(ac.destination);
+  o1.start();o2.start();lfo.start();
+}
+const hz=(m,c=0)=>440*Math.pow(2,(m+c/100-69)/12);
+function update(){
+  readControls();labelLips();horn();
+  const noteEl=document.getElementById("note");
+  if(partial===null){
+    if(ac&&sounding){g.gain.setTargetAtTime(0,ac.currentTime,.05);sounding=false;}
+    noteEl.style.removeProperty("--cur");return;
+  }
+  const drop=valves.reduce((a,v)=>a+DROP[v],0);
+  const written=48+PART[partial]-drop, sound=written+TRANS(), cents=CENTS[partial]||0;
+  const shown=S.show==="sound"?sound:written;
+  noteEl.textContent=nm(shown);
+  noteEl.style.setProperty("--cur",partial===7?"var(--lip)":"var(--ink)");
+  document.getElementById("tech").textContent=`밸브 ${comboName(valves)} · ${partial}배음${partial===7?" (음정이 낮아 잘 안 씀)":""}`;
+  document.getElementById("hz").textContent=`${S.show==="sound"?"실음":"기보음"} ${nm(shown)} · ${S.key==="bb"?`실음 ${nm(sound)}`:"C 트럼펫"} · ${hz(sound,cents).toFixed(1)} Hz`;
+  const std=STD[written], alts=altsFor(written).filter(a=>!(a.n===partial&&a.c.join()===valves.join()));
+  const isStd=std&&std.n===partial&&std.c.join()===valves.join();
+  document.getElementById("alts").innerHTML=(isStd?"<b>기본 운지</b>":std?`기본 운지는 <b>${comboName(std.c)} · ${std.n}배음</b>`:"")+
+    (alts.length?` · 같은 음: ${alts.map(a=>`${comboName(a.c)}(${a.n})`).join(", ")}`:"");
+  if(!ac) return;
+  const f=hz(sound,cents), t=ac.currentTime;
+  if(!sounding){
+    [o1,o2].forEach(o=>{o.frequency.cancelScheduledValues(t);o.frequency.setValueAtTime(f*.97,t);o.frequency.setTargetAtTime(f,t,.02);});
+    g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value*.15,t);g.gain.setTargetAtTime(.24,t,.015);g.gain.setTargetAtTime(.2,t+.08,.1);
+    lp.frequency.cancelScheduledValues(t);lp.frequency.setValueAtTime(f*1.5,t);lp.frequency.setTargetAtTime(Math.min(7000,f*7),t,.03);lp.frequency.setTargetAtTime(Math.min(5200,f*4.5),t+.1,.15);
+    lfoG.gain.cancelScheduledValues(t);lfoG.gain.setValueAtTime(0,t);lfoG.gain.setTargetAtTime(S.vib,t+.35,.25);
+    sounding=true;
+  }else{
+    [o1,o2].forEach(o=>o.frequency.setTargetAtTime(f,t,.012));
+    lp.frequency.setTargetAtTime(Math.min(5200,f*4.5),t,.05);
+  }
+}
+
+/* ---------- status / settings ---------- */
+function status(){
+  const p=innerHeight>innerWidth;document.body.classList.toggle("portrait",p);
+  document.getElementById("status").textContent=`${S.key==="bb"?"B♭":"C"} 트럼펫 · ${S.lipMode==="tilt"?"입 버튼을 누른 채 폰을 기울이면 배음이 바뀌어요":"배음 칸을 누른 채 밀면 립 슬러"}`;
+}
+addEventListener("resize",status);
+const dlg=document.getElementById("dlg");
+document.getElementById("gear").onclick=()=>{renderSettings();dlg.showModal();};
+document.getElementById("closeBtn").onclick=()=>dlg.close();
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+function seg(id,opts,key){
+  const box=document.getElementById(id);box.innerHTML="";
+  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));
+    b.onclick=()=>{S[key]=v;if(key==="vEdge"&&S.mEdge===v)S.mEdge=OPP[v];if(key==="lipMode"&&v!=="tilt"&&S.mEdge==="none")S.mEdge=OPP[S.vEdge];save();ptrs.clear();if(S.lipMode==="tilt"){enableSensors();tBase=null;tIdx=null;}build();status();renderSettings();};box.appendChild(b);});
+}
+function renderSettings(){
+  const EN={top:"위",bottom:"아래",left:"왼쪽",right:"오른쪽"};
+  seg("sVEdge",Object.entries(EN),"vEdge");
+  const mopts=Object.entries(EN).filter(([k])=>k!==S.vEdge);
+  if(S.lipMode==="tilt") mopts.push(["none","없음 (빈 화면 터치)"]);
+  seg("sMEdge",mopts,"mEdge");
+  seg("sVMode",[[3,"3개 (1·2·3)"],[5,"5개 (+2·3, 1·3)"],[6,"6개 (+1·2·3)"]],"vMode");
+  seg("sVLen",[[100,"100%"],[80,"80%"],[65,"65%"],[50,"50%"]],"vLen");
+  seg("sLLen",[[100,"100%"],[80,"80%"],[65,"65%"],[50,"50%"]],"lLen");
+  seg("sNo7",[[false,"포함"],[true,"빼기"]],"no7");
+  seg("sOrder",[["123","1·2·3"],["321","3·2·1"]],"order");
+  seg("sLipMode",[["touch","배음 칸 누르기"],["tilt","입 버튼 + 기울기"]],"lipMode");
+  seg("sTilt",[["pitch","앞뒤로 (벨 올리기)"],["tilt","핸들처럼"],["yaw","좌우로 돌리기"]],"tilt");
+  seg("sDeg",[[5,"5°"],[8,"8°"],[12,"12°"]],"deg");
+  seg("sInv",[[false,"기본"],[true,"반대로"]],"inv");
+  document.getElementById("gTilt").hidden=S.lipMode!=="tilt";
+  seg("sRange",[["std","2~8배음"],["ext","1~10배음 (페달·하이)"]],"range");
+  seg("sLabel",[["note","음 이름"],["sol","도레미"],["none","숫자만"]],"label");
+  seg("sKey",[["bb","B♭ 트럼펫"],["c","C 트럼펫"]],"key");
+  seg("sShow",[["written","기보음"],["sound","실음"]],"show");
+  seg("sVib",[[0,"없음"],[6,"약하게"],[14,"강하게"]],"vib");
+}
+build();status();
+</script>
+</body>
+</html>

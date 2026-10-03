@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>폰 테레민</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#efe9e1; --surface:#fbf8f4; --ink:#22170f; --muted:#6f6257; --line:#d8cdbf;
+  --wood:#5b3a22; --glow:#2f9e8f; --hand:#e0a32e;
+  --serif:"Fraunces",Georgia,serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#140f0b; --surface:#1f1813; --ink:#f3ebe1; --muted:#a8998b; --line:#3a2f27;
+    --wood:#8a5c39; --glow:#4fd1bf; --hand:#f2bc52;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#140f0b; --surface:#1f1813; --ink:#f3ebe1; --muted:#a8998b; --line:#3a2f27;
+  --wood:#8a5c39; --glow:#4fd1bf; --hand:#f2bc52;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;display:flex;flex-direction:column;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+
+.head{padding:10px 16px 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.note{font-family:var(--serif);font-weight:800;font-size:clamp(3rem,15vw,4.6rem);line-height:.85;letter-spacing:-.03em;min-width:3ch}
+.note small{font-size:.34em;font-weight:500;color:var(--muted);letter-spacing:0;margin-left:4px}
+.meter{flex:1;max-width:220px;padding-bottom:6px}
+.cents{position:relative;height:10px;border-radius:999px;background:var(--line)}
+.cents::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:var(--ink);transform:translateX(-50%)}
+.needle{position:absolute;top:-3px;width:16px;height:16px;border-radius:50%;background:var(--glow);transform:translateX(-50%);left:50%;transition:left .05s linear}
+.cl{display:flex;justify-content:space-between;font-size:.66rem;color:var(--muted);margin-top:4px}
+.hz{font-size:.74rem;color:var(--muted);text-align:right;margin-top:2px}
+
+.stage{position:relative;flex:1;min-height:0;margin:0 10px;border-radius:22px;overflow:hidden;background:var(--wood);touch-action:none}
+video,#ov{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+video{transform:scaleX(-1);opacity:.55;filter:saturate(.6)}
+.scale{position:absolute;left:0;top:0;bottom:0;width:58px;pointer-events:none}
+.scale div{position:absolute;left:0;right:0;height:0;border-top:1px solid rgba(255,255,255,.28)}
+.scale div.c{border-top:2px solid rgba(255,255,255,.7)}
+.scale span{position:absolute;left:8px;top:-9px;font:600 .68rem var(--serif);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.antenna{position:absolute;right:16px;top:12px;bottom:12px;width:4px;border-radius:4px;background:linear-gradient(#f4f1ec,#9a948c);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.antenna.live{box-shadow:0 0 14px 3px var(--glow)}
+.hint{position:absolute;left:66px;right:34px;bottom:14px;color:#fff;font-size:.8rem;line-height:1.45;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none}
+
+.bar{display:flex;align-items:center;gap:8px;padding:8px 10px 10px}
+.ib{flex:0 0 auto;height:42px;min-width:42px;border-radius:13px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 12px;font-size:.85rem;font-weight:600;gap:6px}
+.ib svg{width:20px;height:20px}
+.ib.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.status{flex:1;min-width:0;font-size:.74rem;color:var(--muted);line-height:1.35}
+
+.ov{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:28px;text-align:center}
+.ov[hidden]{display:none}
+.ov .box{max-width:420px}
+.ov h1{font-family:var(--serif);font-weight:800;font-size:2.4rem;letter-spacing:-.02em;margin:0 0 10px;line-height:1}
+.ov p{color:var(--muted);font-size:.92rem;margin:0 0 18px;line-height:1.6}
+.ov .row{display:flex;flex-direction:column;gap:10px;align-items:center}
+.go{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:13px 28px;font-weight:600;font-size:1rem;cursor:pointer}
+.alt{border:0;background:transparent;color:var(--muted);text-decoration:underline;font-size:.86rem;cursor:pointer}
+.err{color:#c0392b;font-size:.82rem;margin-top:12px}
+
+dialog{border:0;padding:0;background:transparent;max-width:none;width:100%;max-height:100%;margin:0;inset:auto 0 0 0;position:fixed}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.sheet{background:var(--surface);color:var(--ink);border-radius:22px 22px 0 0;max-width:560px;margin:0 auto;padding:16px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto}
+.sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sheet h2{font-family:var(--serif);font-weight:800;font-size:1.3rem;margin:0}
+.close{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:7px 16px;font-weight:600;cursor:pointer}
+.grp{padding:11px 0;border-top:1px solid var(--line)}
+.grp:first-of-type{border-top:0}
+.grp h3{font-size:.8rem;font-weight:600;color:var(--muted);margin:0 0 8px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:8px 10px;font-size:.88rem;font-weight:500;cursor:pointer;min-width:52px}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.tg{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0;font-size:.92rem;cursor:pointer}
+.tg small{display:block;color:var(--muted);font-size:.75rem}
+.tg input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:0 0 auto;cursor:pointer;margin:0}
+.tg input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.tg input:checked{background:var(--glow)}
+.tg input:checked::after{left:21px}
+@media (prefers-reduced-motion:reduce){.needle,.tg input::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="head">
+  <div class="note" id="note">–</div>
+  <div class="meter">
+    <div class="cents"><div class="needle" id="needle"></div></div>
+    <div class="cl"><span>−50</span><span>음정</span><span>+50</span></div>
+    <div class="hz" id="hz">&nbsp;</div>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <video id="vid" playsinline muted></video>
+  <canvas id="ov"></canvas>
+  <div class="scale" id="scale"></div>
+  <div class="antenna" id="ant"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="bar">
+  <button class="ib" id="gear" aria-label="환경설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <div class="status" id="status"></div>
+  <button class="ib primary" id="bgBtn">배경 다시 찍기</button>
+</div>
+
+<div class="ov" id="startOv">
+  <div class="box">
+    <h1>폰 테레민</h1>
+    <p>폰을 세워 두고 앞 카메라 앞에서 손을 위아래로 움직이면, 손 높이에 따라 음이 바뀌어요. 손을 높이 들수록 높은 음이 납니다.</p>
+    <div class="row">
+      <button class="go" id="camBtn">카메라로 시작</button>
+      <button class="alt" id="touchBtn">카메라 없이 화면 터치로 하기</button>
+    </div>
+    <p class="err" id="err" hidden></p>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="sheet">
+    <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+    <div class="grp"><h3>입력 방식</h3><div class="seg" id="sMode"></div></div>
+    <div class="grp"><h3>음역</h3><div class="seg" id="sRange"></div></div>
+    <div class="grp"><h3>가장 낮은 음</h3><div class="seg" id="sLow"></div></div>
+    <div class="grp"><h3>음 맞추기</h3><div class="seg" id="sSnap"></div></div>
+    <div class="grp"><h3>손 감지 민감도</h3><div class="seg" id="sSens"></div></div>
+    <div class="grp">
+      <label class="tg"><span>좌우로 음량 조절<small>손이 오른쪽(안테나 쪽)으로 갈수록 크게</small></span><input type="checkbox" id="sVol"></label>
+      <label class="tg"><span>비브라토 더하기<small>손을 가만히 둬도 음이 살짝 떨림</small></span><input type="checkbox" id="sVib"></label>
+    </div>
+    <div class="grp"><h3>기준음</h3><div class="seg" id="sTune"></div></div>
+  </div>
+</dialog>
+
+<script>
+const NAMES=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const DEF={mode:"cam",range:2,low:60,snap:"free",sens:2,vol:false,vib:true,a4:440};
+let S={...DEF};
+try{const v=JSON.parse(localStorage.getItem("theremin")||"null");if(v)S={...DEF,...v};}catch(e){}
+const save=()=>{try{localStorage.setItem("theremin",JSON.stringify(S));}catch(e){}};
+const MAJ=[0,2,4,5,7,9,11];
+
+/* ---------- audio ---------- */
+let ac=null, osc, osc2, g, lp, vib, vibG;
+function initAudio(){
+  if(ac){if(ac.state==="suspended")ac.resume();return;}
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  osc=ac.createOscillator();osc.type="sine";
+  osc2=ac.createOscillator();osc2.type="triangle";
+  const g2=ac.createGain();g2.gain.value=.18;
+  lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=2400;
+  g=ac.createGain();g.gain.value=0;
+  vib=ac.createOscillator();vib.frequency.value=5.6;vibG=ac.createGain();vibG.gain.value=0;vib.connect(vibG);vibG.connect(osc.frequency);vibG.connect(osc2.frequency);
+  osc.connect(lp);osc2.connect(g2);g2.connect(lp);lp.connect(g);g.connect(ac.destination);
+  osc.frequency.value=osc2.frequency.value=262;
+  osc.start();osc2.start();vib.start();
+}
+const hz=m=>S.a4*Math.pow(2,(m-69)/12);
+function quantize(m){
+  if(S.snap==="semi") return m+(Math.round(m)-m)*.85;
+  if(S.snap==="major"){
+    const base=Math.floor(m/12)*12;let best=null,bd=99;
+    for(let o=-12;o<=12;o+=12)for(const st of MAJ){const c=base+o+st;const d=Math.abs(c-m);if(d<bd){bd=d;best=c;}}
+    return m+(best-m)*.85;
+  }
+  return m;
+}
+/* frac: 0 = bottom, 1 = top; vol 0..1 */
+let present=false, curM=null;
+function setVoice(frac,vol){
+  const m=quantize(S.low+frac*S.range*12);
+  curM=m;
+  const f=hz(m), t=ac?ac.currentTime:0;
+  if(ac){
+    osc.frequency.setTargetAtTime(f,t,.035);osc2.frequency.setTargetAtTime(f,t,.035);
+    g.gain.setTargetAtTime(.05+.22*vol,t,.06);
+    vibG.gain.setTargetAtTime(S.vib?f*.006:0,t,.2);
+  }
+  present=true;document.getElementById("ant").classList.add("live");
+  showPitch(m);
+}
+function silence(){
+  if(!present) return;
+  present=false;document.getElementById("ant").classList.remove("live");
+  if(ac) g.gain.setTargetAtTime(0,ac.currentTime,.12);
+  document.getElementById("needle").style.left="50%";
+}
+function showPitch(m){
+  const r=Math.round(m), c=Math.round((m-r)*100);
+  document.getElementById("note").innerHTML=`${NAMES[((r%12)+12)%12]}<small>${Math.floor(r/12)-1}</small>`;
+  document.getElementById("needle").style.left=(50+c)+"%";
+  document.getElementById("hz").textContent=`${hz(m).toFixed(1)} Hz · ${c>0?"+":""}${c} 센트`;
+}
+
+/* ---------- note scale overlay ---------- */
+function drawScale(){
+  const box=document.getElementById("scale");box.innerHTML="";
+  const n=S.range*12;
+  for(let i=0;i<=n;i++){
+    const m=S.low+i, pc=m%12;
+    if(S.snap==="major"&&!MAJ.includes(pc)) continue;
+    const d=document.createElement("div");
+    d.style.top=(100-i/n*100)+"%";
+    if(pc===0) d.className="c";
+    if(MAJ.includes(pc)) d.innerHTML=`<span>${NAMES[pc]}${pc===0?Math.floor(m/12)-1:""}</span>`;
+    box.appendChild(d);
+  }
+}
+
+/* ---------- camera hand tracking (background subtraction) ---------- */
+const vid=document.getElementById("vid"), ov=document.getElementById("ov"), octx=ov.getContext("2d");
+const W=80, H=60;
+const work=document.createElement("canvas");work.width=W;work.height=H;
+const wctx=work.getContext("2d",{willReadFrequently:true});
+let bg=null, bgFrames=0, stream=null, running=false, smY=null, smX=null, lost=0;
+const mask=new Uint8Array(W*H);
+function grab(){
+  wctx.save();wctx.scale(-1,1);wctx.drawImage(vid,-W,0,W,H);wctx.restore();
+  const d=wctx.getImageData(0,0,W,H).data, g=new Float32Array(W*H);
+  for(let i=0;i<W*H;i++) g[i]=d[i*4]*.3+d[i*4+1]*.59+d[i*4+2]*.11;
+  return g;
+}
+function captureBg(){bg=null;bgFrames=0;setHint("배경을 찍는 중이에요. 화면에서 손을 빼 주세요…");}
+function loop(){
+  if(!running) return;
+  if(vid.readyState>=2){
+    const g=grab();
+    if(bgFrames<12){
+      if(!bg) bg=new Float32Array(g); else for(let i=0;i<g.length;i++) bg[i]=bg[i]*.7+g[i]*.3;
+      bgFrames++;
+      if(bgFrames===12) setHint("이제 손가락을 들어 위아래로 움직여 보세요. 높이 들수록 높은 음이에요.");
+    }else track(g);
+  }
+  requestAnimationFrame(loop);
+}
+function track(g){
+  const th=[34,24,16][S.sens-1];
+  for(let i=0;i<W*H;i++){
+    const diff=Math.abs(g[i]-bg[i]);
+    mask[i]=diff>th?1:0;
+    if(!mask[i]) bg[i]=bg[i]*.985+g[i]*.015; // slowly follow lighting changes
+  }
+  // clean speckles: keep pixels with >=3 foreground neighbours
+  let topY=-1, sumX=0, cnt=0, area=0;
+  for(let y=1;y<H-1;y++){
+    let rowHits=0,rowX=0;
+    for(let x=1;x<W-1;x++){
+      const i=y*W+x; if(!mask[i]) continue;
+      const nb=mask[i-1]+mask[i+1]+mask[i-W]+mask[i+W]+mask[i-W-1]+mask[i-W+1]+mask[i+W-1]+mask[i+W+1];
+      if(nb>=3){rowHits++;rowX+=x;area++;}
+    }
+    if(topY<0&&rowHits>=2){topY=y;sumX=rowX;cnt=rowHits;}
+  }
+  drawMask(topY,cnt?sumX/cnt:0);
+  if(topY<0||area<25){ if(++lost>4){silence();smY=null;} return; }
+  lost=0;
+  const y=topY/H, x=(sumX/cnt)/W;
+  smY=smY==null?y:smY+(y-smY)*.35; smX=smX==null?x:smX+(x-smX)*.3;
+  const frac=Math.max(0,Math.min(1,1-(smY-.04)/.88));
+  setVoice(frac,S.vol?Math.max(0,Math.min(1,smX*1.15)):.8);
+}
+function drawMask(topY,cx){
+  const cw=ov.clientWidth, ch=ov.clientHeight;
+  if(ov.width!==cw||ov.height!==ch){ov.width=cw;ov.height=ch;}
+  octx.clearRect(0,0,cw,ch);
+  // object-fit:cover mapping
+  const sc=Math.max(cw/W,ch/H), ox=(cw-W*sc)/2, oy=(ch-H*sc)/2;
+  octx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--hand").trim()||"#e0a32e";
+  octx.globalAlpha=.35;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++) if(mask[y*W+x]) octx.fillRect(ox+x*sc,oy+y*sc,sc+.5,sc+.5);
+  octx.globalAlpha=1;
+  if(topY>=0){
+    const px=ox+cx*sc, py=oy+topY*sc;
+    octx.strokeStyle="#fff";octx.lineWidth=2;octx.setLineDash([5,5]);
+    octx.beginPath();octx.moveTo(0,py);octx.lineTo(cw,py);octx.stroke();octx.setLineDash([]);
+    octx.beginPath();octx.arc(px,py,10,0,Math.PI*2);octx.fillStyle="#fff";octx.fill();
+  }
+}
+async function startCam(){
+  const err=document.getElementById("err");err.hidden=true;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:320},height:{ideal:240}},audio:false});
+    vid.srcObject=stream;await vid.play();
+    running=true;S.mode="cam";save();
+    document.getElementById("startOv").hidden=true;
+    captureBg();loop();ui();
+  }catch(e){
+    err.hidden=false;
+    err.textContent="카메라를 켤 수 없어요. 브라우저에서 카메라 권한을 허용했는지 확인하거나, 이 페이지를 직접 주소로 열어 보세요. 지금은 터치로 해볼 수 있어요.";
+  }
+}
+function stopCam(){running=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}vid.srcObject=null;octx.clearRect(0,0,ov.width,ov.height);}
+
+/* ---------- touch mode ---------- */
+const stage=document.getElementById("stage");
+let touchId=null;
+function touchAt(e){
+  const r=stage.getBoundingClientRect();
+  const frac=1-(e.clientY-r.top)/r.height, x=(e.clientX-r.left)/r.width;
+  setVoice(Math.max(0,Math.min(1,frac)),S.vol?x:.8);
+  drawTouch(e.clientX-r.left,e.clientY-r.top);
+}
+function drawTouch(x,y){
+  const cw=ov.clientWidth,ch=ov.clientHeight;if(ov.width!==cw||ov.height!==ch){ov.width=cw;ov.height=ch;}
+  octx.clearRect(0,0,cw,ch);if(x==null)return;
+  octx.strokeStyle="#fff";octx.lineWidth=2;octx.setLineDash([5,5]);octx.beginPath();octx.moveTo(0,y);octx.lineTo(cw,y);octx.stroke();octx.setLineDash([]);
+  octx.beginPath();octx.arc(x,y,14,0,Math.PI*2);octx.fillStyle="#fff";octx.fill();
+}
+stage.addEventListener("pointerdown",e=>{ if(S.mode!=="touch"||touchId!==null) return; initAudio(); touchId=e.pointerId; stage.setPointerCapture(e.pointerId); touchAt(e); });
+stage.addEventListener("pointermove",e=>{ if(e.pointerId===touchId) touchAt(e); });
+const tEnd=e=>{ if(e.pointerId!==touchId) return; touchId=null; silence(); drawTouch(null); };
+stage.addEventListener("pointerup",tEnd);stage.addEventListener("pointercancel",tEnd);
+
+/* ---------- UI ---------- */
+function setHint(t){document.getElementById("hint").textContent=t;}
+function ui(){
+  const cam=S.mode==="cam";
+  document.getElementById("bgBtn").hidden=!cam;
+  document.getElementById("status").textContent=cam?"손이 화면에서 사라지면 소리가 멎어요. 배경이 바뀌면 다시 찍어 주세요.":"화면을 누른 채로 위아래로 움직이세요.";
+  if(!cam) setHint("누른 채로 위로 올리면 높은 음, 아래로 내리면 낮은 음이에요.");
+  drawScale();
+}
+document.getElementById("bgBtn").onclick=()=>{silence();captureBg();};
+document.getElementById("camBtn").onclick=()=>{initAudio();startCam();};
+document.getElementById("touchBtn").onclick=()=>{initAudio();S.mode="touch";save();stopCam();document.getElementById("startOv").hidden=true;ui();};
+
+const dlg=document.getElementById("dlg");
+document.getElementById("gear").onclick=()=>{renderSettings();dlg.showModal();};
+document.getElementById("closeBtn").onclick=()=>dlg.close();
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+function seg(id,opts,key,after){
+  const box=document.getElementById(id);box.innerHTML="";
+  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));
+    b.onclick=()=>{S[key]=v;save();if(after)after(v);ui();renderSettings();};box.appendChild(b);});
+}
+function renderSettings(){
+  seg("sMode",[["cam","카메라"],["touch","화면 터치"]],"mode",v=>{silence();if(v==="cam"){if(!running)startCam();}else stopCam();});
+  seg("sRange",[[1,"1옥타브"],[2,"2옥타브"],[3,"3옥타브"]],"range");
+  seg("sLow",[[48,"C3"],[55,"G3"],[60,"C4"],[67,"G4"]],"low");
+  seg("sSnap",[["free","자유롭게"],["semi","반음에 맞춤"],["major","도레미에 맞춤"]],"snap");
+  seg("sSens",[[1,"낮음"],[2,"보통"],[3,"높음"]],"sens");
+  seg("sTune",[[440,"A4 = 440"],[442,"A4 = 442"]],"a4");
+  [["sVol","vol"],["sVib","vib"]].forEach(([id,k])=>{const el=document.getElementById(id);el.checked=S[k];el.onchange=()=>{S[k]=el.checked;save();};});
+}
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+  const b=document.getElementById("camBtn");b.disabled=true;b.style.opacity=.4;
+  document.getElementById("err").hidden=false;document.getElementById("err").textContent="이 브라우저에서는 카메라를 쓸 수 없어요. 화면 터치로 해보세요.";
+}
+drawScale();
+</script>
+</body>
+</html>

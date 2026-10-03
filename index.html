@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>가상악기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ece8e1;--surface:#faf8f4;--ink:#1d1914;--muted:#6d655b;--line:#d8d0c4;--a:#b0841f;
+  --display:"Bricolage Grotesque","IBM Plex Sans KR",system-ui,sans-serif;--body:"IBM Plex Sans KR",system-ui,-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#15130f;--surface:#201c17;--ink:#f2ece3;--muted:#a69c8f;--line:#383128;--a:#e3b552}}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:28px 18px 48px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,8vw,3.2rem);letter-spacing:-.03em;margin:0 0 6px;line-height:1}
+.lede{color:var(--muted);margin:0 0 24px}
+h2{font-family:var(--display);font-weight:800;font-size:1.05rem;margin:26px 0 10px;color:var(--a)}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+a.card{display:block;text-decoration:none;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px}
+a.card:hover{border-color:var(--a)}
+a.card b{display:block;font-family:var(--display);font-weight:800;font-size:1.1rem}
+a.card span{font-size:.82rem;color:var(--muted)}
+.tag{display:inline-block;font-size:.66rem;font-weight:600;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--a) 18%,transparent);color:var(--a);margin-left:6px;vertical-align:2px}
+footer{margin-top:30px;font-size:.78rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <h1>가상악기</h1>
+  <p class="lede">악기와 음의 특성을 직접 만져 보며 익히는 폰용 연주·운지 페이지 모음</p>
+
+  <h2>연주</h2>
+  <div class="list">
+    <a class="card" href="harmonica-play.html"><b>다이아토닉 하모니카<span class="tag">센서</span></b><span>벤딩·자동 전환·숫자보·데모</span></a>
+    <a class="card" href="clarinet-play.html"><b>클라리넷</b><span>패드 연주·운지 그림·MIDI</span></a>
+    <a class="card" href="sax-play.html"><b>색소폰</b><span>알토 중심·알티시모·배음 운지</span></a>
+    <a class="card" href="chromatic-harmonica.html"><b>크로매틱 하모니카<span class="tag">센서</span></b><span>기울여서 ♯·자동 전환</span></a>
+    <a class="card" href="trumpet-play.html"><b>트럼펫<span class="tag">센서</span></b><span>밸브·배음·기울기</span></a>
+    <a class="card" href="flute-play.html"><b>플루트 · 피콜로</b><span>패드 연주·운지 그림</span></a>
+    <a class="card" href="stradella.html"><b>스트라델라 베이스</b><span>아코디언 왼손 버튼판</span></a>
+    <a class="card" href="theremin.html"><b>폰 테레민<span class="tag">카메라</span></b><span>손 높이로 연주</span></a>
+  </div>
+
+  <h2>스케일 · 운지</h2>
+  <div class="list">
+    <a class="card" href="c-harmonica.html"><b>C 하모니카 음역 지도</b><span>블로·드로·벤딩·오버</span></a>
+    <a class="card" href="clarinet-fingering.html"><b>클라리넷 대체 운지 사전</b><span>E3~A7 운지 235개</span></a>
+  </div>
+
+  <footer>센서·카메라는 https 주소에서 열어야 작동해요. 아이폰은 처음 시작할 때 권한을 허용해 주세요.</footer>
+</main>
+</body>
+</html>
