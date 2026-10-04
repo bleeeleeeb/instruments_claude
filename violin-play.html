@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>바이올린 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#efe7dc; --surface:#fbf7f1; --ink:#26180f; --muted:#7c6a58; --line:#dccfbd;
+  --ebony:#1d1714; --string:#e8dcc4; --tape:#f4efe4; --spruce:#c98a3c; --hair:#f3eee2; --hot:#e0a32e;
+  --serif:"Fraunces",Georgia,serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15100c; --surface:#211a14; --ink:#f3eadf; --muted:#a9977f; --line:#3b3027;
+    --ebony:#0c0a09; --string:#d9ccb1; --tape:#cfc6b6; --spruce:#a8702d; --hair:#d9d2c3; --hot:#f2bc52;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15100c; --surface:#211a14; --ink:#f3eadf; --muted:#a9977f; --line:#3b3027;
+  --ebony:#0c0a09; --string:#d9ccb1; --tape:#cfc6b6; --spruce:#a8702d; --hair:#d9d2c3; --hot:#f2bc52;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);display:flex;flex-direction:column;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+.app{flex:1;min-height:0;display:flex;flex-direction:column;padding:8px max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px));gap:6px}
+.read{display:flex;align-items:center;gap:12px;height:54px;flex:0 0 54px;overflow:hidden}
+.note{font-family:var(--serif);font-weight:800;font-size:clamp(1.5rem,6vh,2.4rem);line-height:1;letter-spacing:-.02em;white-space:nowrap;flex:0 0 auto;min-width:5.5ch}
+.sub{flex:1;min-width:0;font-size:.76rem;color:var(--muted);line-height:1.35;height:2.7em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cents{display:inline-block;width:80px;height:6px;border-radius:3px;background:var(--line);position:relative;vertical-align:middle;margin-left:6px}
+.cents i{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;background:var(--hot);left:50%;transform:translateX(-50%)}
+.ib{height:38px;min-width:38px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;font-size:.8rem;font-weight:600}
+.ib svg{width:19px;height:19px}
+.board{flex:2;min-height:0;position:relative;border-radius:14px;overflow:hidden;touch-action:none;background:var(--ebony)}
+.bow{flex:1;min-height:0;position:relative;border-radius:14px;overflow:hidden;touch-action:none;background:radial-gradient(120% 140% at 50% 120%,var(--spruce),color-mix(in srgb,var(--spruce) 55%,#000))}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+dialog{border:0;padding:0;background:transparent;max-width:none;width:100%;max-height:100%;margin:0;inset:auto 0 0 0;position:fixed}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.sheet{background:var(--surface);color:var(--ink);border-radius:22px 22px 0 0;max-width:600px;margin:0 auto;padding:14px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto}
+.sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;position:sticky;top:-14px;background:var(--surface);padding:6px 0;z-index:2}
+.sheet h2{font-family:var(--serif);font-weight:800;font-size:1.3rem;margin:0}
+.close{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:7px 16px;font-weight:600;cursor:pointer}
+.grp{padding:10px 0;border-top:1px solid var(--line)}
+.grp:first-of-type{border-top:0}
+.grp h3{font-size:.8rem;font-weight:600;color:var(--muted);margin:0 0 8px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:11px;padding:8px 10px;font-size:.86rem;font-weight:500;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.note2{font-size:.78rem;color:var(--muted);margin:6px 0 0;line-height:1.45}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="read">
+    <div class="note" id="note">–</div>
+    <div class="sub" id="sub">위 지판의 세로줄을 짚고, 아래 줄받침 위에서 활을 좌우로 문지르면 소리가 나요. 가운데에선 D·A 두 줄이 같이 울리고, 활을 올리면 먼 G줄, 내리면 가까운 E줄로 가요.</div>
+    <button class="ib" id="gear" aria-label="환경설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  </div>
+  <div class="board" id="board"><canvas id="cb"></canvas></div>
+  <div class="bow" id="bow"><canvas id="cw"></canvas></div>
+</div>
+
+<dialog id="dlg">
+  <div class="sheet">
+    <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+    <div class="grp"><h3>왼손 짚기 방식</h3><div class="seg" id="sBarre"></div>
+      <p class="note2">가로선으로 짚기를 켜면 지판 아무 데나 엄지를 대도 그 높이의 가로선이 네 줄을 모두 짚어요. 소리는 활이 닿은 줄만 나요.</p>
+      <h3 style="margin-top:10px">가로선 모양</h3><div class="seg" id="sBarreStyle"></div></div>
+    <div class="grp"><h3>음 맞추기 (왼손)</h3><div class="seg" id="sSnap"></div>
+      <p class="note2">자유롭게는 실제 바이올린처럼 손가락 위치대로 음이 나서, 손가락을 살짝 흔들면 비브라토가 돼요.</p></div>
+    <div class="grp"><h3>음계 (음계에 맞추기일 때)</h3><div class="seg" id="sScale"></div></div>
+    <div class="grp"><h3>지판 길이</h3><div class="seg" id="sSpan"></div><h3 style="margin-top:10px">줄 간격</h3><div class="seg" id="sGap"></div></div>
+    <div class="grp"><h3>지판 글자</h3><div class="seg" id="sLabel"></div>
+      <h3 style="margin-top:10px">옥타브 색 구별</h3><div class="seg" id="sOctCol"></div>
+      <p class="note2"><span style="color:#4fc08e">■ 3옥타브</span> <span style="color:#6c97ff">■ 4</span> <span style="color:#a986ff">■ 5</span> <span style="color:#ff73ad">■ 6</span> <span style="color:#ff9d4a">■ 7</span> · 클라리넷·색소폰 페이지와 같은 색이에요.</p></div>
+    <div class="grp"><h3>자동 활</h3><div class="seg" id="sAuto"></div>
+      <p class="note2">켜면 활이 저절로 오가요. 왼손으로 짚은 줄이 바로 울리고, 활 영역을 누르고 있으면 그 높이의 줄이 울려요. 가로선 짚기에서는 마지막으로 고른 줄이 울려요.</p>
+      <h3 style="margin-top:10px">활 한 번 긋는 시간</h3><div class="seg" id="sAutoSpeed"></div>
+      <h3 style="margin-top:10px">세기</h3><div class="seg" id="sAutoLevel"></div></div>
+    <div class="grp"><h3>활 긋는 방식</h3><div class="seg" id="sBowMode"></div>
+      <p class="note2">활 모양대로는 보이는 활대를 따라 그으면 소리가 나고, 활대와 수직으로 비키면 줄이 바뀌어요. 4구역은 높이로 줄을 고르고 좌우로 그어요.</p>
+      <h3 style="margin-top:10px">활 궤도 보이기</h3><div class="seg" id="sGuide"></div></div>
+    <div class="grp"><h3>활 영역 경계에서 겹음 (두 줄 동시)</h3><div class="seg" id="sDouble"></div></div>
+    <div class="grp"><h3>활 영역을 톡 치면</h3><div class="seg" id="sPizz"></div></div>
+    <div class="grp"><h3>손 방향</h3><div class="seg" id="sHand"></div></div>
+    <div class="grp"><h3>음색</h3><div class="seg" id="sTone"></div>
+      <h3 style="margin-top:10px">울림 (홀 잔향)</h3><div class="seg" id="sRoom"></div>
+      <h3 style="margin-top:10px">자동 비브라토</h3><div class="seg" id="sVib"></div>
+      <p class="note2">자동 비브라토는 음이 0.3초쯤 이어지면 살짝 떨리기 시작해요. 직접 손가락을 흔들어서 하고 싶으면 꺼 두세요.</p></div>
+    <div class="grp"><h3>기준음</h3><div class="seg" id="sTune"></div></div>
+  </div>
+</dialog>
+
+<script>
+/* strings from top to bottom: 1st E, 2nd A, 3rd D, 4th G (bow: higher = 1st string) */
+const STR=[{n:"E",num:1,m:76},{n:"A",num:2,m:69},{n:"D",num:3,m:62},{n:"G",num:4,m:55}];
+const NAMES=["C","C♯","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
+const SOL=["도","도♯","레","미♭","미","파","파♯","솔","라♭","라","시♭","시"];
+const SCALES={C:[0,2,4,5,7,9,11],G:[7,9,11,0,2,4,6],D:[2,4,6,7,9,11,1],A:[9,11,1,2,4,6,8],F:[5,7,9,10,0,2,4]};
+const DEF={tone:"normal",room:.22,vib:true,vibDepth:12,octCol:false,autoBow:false,autoSpeed:1.4,autoLevel:.75,guide:true,bowMode:"bow",barre:false,barreStyle:"glow",gap:.8,snap:"free",scale:"G",span:12,label:"note",dbl:true,pizz:true,hand:"right",a4:440};
+let S={...DEF};
+try{const v=JSON.parse(localStorage.getItem("violin-sim")||"null");if(v)S={...DEF,...v};}catch(e){}
+const save=()=>{try{localStorage.setItem("violin-sim",JSON.stringify(S));}catch(e){}};
+const nm=m=>{const r=Math.round(m);return (S.label==="sol"?SOL:NAMES)[((r%12)+12)%12]+(S.label==="sol"?"":Math.floor(r/12)-1);};
+
+/* ---------- audio: four bowed strings ---------- */
+let ac=null, voices=[], noiseBuf=null;
+let reverbGain=null, vibLfo=null;
+function makeImpulse(sec){const n=Math.floor(ac.sampleRate*sec),b=ac.createBuffer(2,n,ac.sampleRate);
+  for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++){const t=i/n;d[i]=(Math.random()*2-1)*Math.pow(1-t,3.2)*(i<ac.sampleRate*.01?i/(ac.sampleRate*.01):1);}}return b;}
+function initAudio(){
+  if(ac){if(ac.state==="suspended")ac.resume();return;}
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  const comp=ac.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3;comp.attack.value=.01;comp.release.value=.2;comp.connect(ac.destination);
+  // violin body: light low resonances, a slight nasal dip, a strong "bridge hill" around 2.5–3 kHz and some air
+  const f=(type,fr,q,g)=>{const x=ac.createBiquadFilter();x.type=type;x.frequency.value=fr;x.Q.value=q;if(g!=null)x.gain.value=g;return x;};
+  const hp=f("highpass",180,.7), b1=f("peaking",285,1.6,3), b2=f("peaking",460,1.8,2), dip=f("peaking",1300,1.2,-3), hill=f("peaking",2700,.9,7), air=f("highshelf",5200,.7,2);
+  hp.connect(b1);b1.connect(b2);b2.connect(dip);dip.connect(hill);hill.connect(air);
+  const dry=ac.createGain();dry.gain.value=.85;air.connect(dry);dry.connect(comp);
+  const conv=ac.createConvolver();conv.buffer=makeImpulse(1.8);reverbGain=ac.createGain();reverbGain.gain.value=S.room;
+  air.connect(conv);conv.connect(reverbGain);reverbGain.connect(comp);
+  noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);{const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+  vibLfo=ac.createOscillator();vibLfo.frequency.value=5.6;vibLfo.start();
+  STR.forEach(()=>{
+    const o1=ac.createOscillator();o1.type="sawtooth";const o2=ac.createOscillator();o2.type="sawtooth";o2.detune.value=3;
+    const g1=ac.createGain();g1.gain.value=.62;const g2=ac.createGain();g2.gain.value=.2;
+    const lp=f("lowpass",3000,.6);
+    const nz=ac.createBufferSource();nz.buffer=noiseBuf;nz.loop=true;const nf=f("bandpass",4500,.8);const ng=ac.createGain();ng.gain.value=0;
+    const vg=ac.createGain();vg.gain.value=0;vibLfo.connect(vg);vg.connect(o1.detune);vg.connect(o2.detune);
+    const out=ac.createGain();out.gain.value=0;
+    o1.connect(g1);o2.connect(g2);g1.connect(lp);g2.connect(lp);lp.connect(out);nz.connect(nf);nf.connect(ng);ng.connect(out);out.connect(hp);
+    o1.start();o2.start();nz.start();
+    voices.push({o:[o1,o2],lp,ng,out,vg,amp:0,on:0});
+  });
+}
+const hz=(m)=>S.a4*Math.pow(2,(m-69)/12);
+function pluck(m){
+  if(!ac) return;const t=ac.currentTime,f=hz(m);
+  const o=ac.createOscillator();o.type="triangle";o.frequency.value=f;
+  const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.setValueAtTime(f*8,t);lp.frequency.exponentialRampToValueAtTime(f*1.5,t+.4);
+  const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.35,t+.004);g.gain.exponentialRampToValueAtTime(.001,t+.9);
+  o.connect(lp);lp.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+1);
+}
+
+/* ---------- fingerboard ---------- */
+const board=document.getElementById("board"), cb=document.getElementById("cb"), xb=cb.getContext("2d");
+const bowEl=document.getElementById("bow"), cw=document.getElementById("cw"), xw=cw.getContext("2d");
+let BW=0,BH=0,WW=0,WH=0,dpr=1;
+let NUT=44;   // top band = open strings (개방현)
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function resize(){dpr=window.devicePixelRatio||1;
+  BW=board.clientWidth;BH=board.clientHeight;NUT=Math.max(40,Math.min(64,BH*.12));cb.width=BW*dpr;cb.height=BH*dpr;xb.setTransform(dpr,0,0,dpr,0,0);
+  WW=bowEl.clientWidth;WH=bowEl.clientHeight;cw.width=WW*dpr;cw.height=WH*dpr;xw.setTransform(dpr,0,0,dpr,0,0);}
+addEventListener("resize",resize);
+const colOf=st=>3-st;                         // string index (0=E…3=G) -> column (0=G…3=E)
+const flip=()=>S.hand==="left";
+const colX=c=>{const x=BW/2+(c-1.5)*BW/4*S.gap;return flip()?BW-x:x;};
+const strAtX=x=>{let best=0,bd=1e9;for(let c=0;c<4;c++){const d=Math.abs(colX(c)-x);if(d<bd){bd=d;best=c;}}return 3-best;};
+function semisAt(py){if(py<NUT)return 0;return Math.max(0,(py-NUT)/(BH-NUT-8)*S.span);}
+function yOfSemi(s){return NUT+s/S.span*(BH-NUT-8);}
+function snapSemi(st,s){
+  if(S.snap==="semi") return Math.round(s);
+  if(S.snap==="scale"){const sc=SCALES[S.scale];let best=Math.round(s),bd=99;
+    for(let k=Math.floor(s)-2;k<=Math.ceil(s)+2;k++){if(k<0)continue;const pc=((STR[st].m+k)%12+12)%12;if(sc.includes(pc)&&Math.abs(k-s)<bd){bd=Math.abs(k-s);best=k;}}return best;}
+  return s;
+}
+const fingers=new Map(); // pointerId -> {st, s}
+function stopFor(st){let best=0,any=false;fingers.forEach(f=>{if(f.all||f.st===st){any=true;if(f.s>best)best=f.s;}});return any?best:0;}
+function pitchOf(st){return STR[st].m+snapSemi(st,stopFor(st));}
+
+/* ---------- bow ---------- */
+let bowP=null, bowAmp=0, bowPos=1.5; // 0 = E (1st) … 3 = G (4th)
+function bowStrings(){
+  if(!bowP) return [];
+  const p=Math.max(0,Math.min(3,bowPos)), k=Math.round(p), off=p-k;
+  if(S.dbl&&Math.abs(off)>.3) return [Math.floor(p),Math.ceil(p)];
+  return [k];
+}
+const posFromY=y=>3-Math.max(0,Math.min(3,(y/WH-.08)/.84*3));
+const posFromLane=y=>3-Math.max(0,Math.min(3,(y/WH-.08)/.84*4-.5));   // four equal lanes, top = G   // up = far G string, down = near E string
+
+/* ---------- input ---------- */
+board.addEventListener("pointerdown",e=>{e.preventDefault();initAudio();board.setPointerCapture(e.pointerId);fingerAt(e);});
+board.addEventListener("pointermove",e=>{if(fingers.has(e.pointerId))fingerAt(e);});
+const fUp=e=>{fingers.delete(e.pointerId);};
+board.addEventListener("pointerup",fUp);board.addEventListener("pointercancel",fUp);
+function fingerAt(e){const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+  fingers.set(e.pointerId,{st:strAtX(x),s:semisAt(y),x,y,all:S.barre});}
+
+/* bowing follows the bow itself: motion along the stick = bowing, motion across it = changing strings */
+function contactScreen(){
+  const g=bridgePts(), pp=Math.max(0,Math.min(3,bowPos)), a=Math.min(2,Math.floor(pp)), t=pp-a;
+  const P=g.pts[a],Q=g.pts[a+1];let x=P.x+(Q.x-P.x)*t;const y=P.y+(Q.y-P.y)*t-10;
+  if(flip()) x=WW-x;
+  return {x,y};
+}
+function bowAxis(fx,fy){const c=contactScreen();let ux=fx-c.x,uy=fy-c.y;const l=Math.hypot(ux,uy)||1;return {ux:ux/l,uy:uy/l};}
+bowEl.addEventListener("pointerdown",e=>{e.preventDefault();initAudio();bowEl.setPointerCapture(e.pointerId);
+  const r=bowEl.getBoundingClientRect(), rx=e.clientX-r.left, ry=e.clientY-r.top;
+  bowPos=S.bowMode==="zones"?posFromLane(ry):posFromY(ry);
+  bowP={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),x0:e.clientX,y0:e.clientY,t0:performance.now(),moved:false,v:0,dir:0,rx,ry};});
+bowEl.addEventListener("pointermove",e=>{if(!bowP||e.pointerId!==bowP.id)return;
+  const r=bowEl.getBoundingClientRect(), now=performance.now(), dt=Math.max(4,now-bowP.t);
+  const dx=e.clientX-bowP.x, dy=e.clientY-bowP.y;
+  let along;
+  if(S.bowMode==="zones"){            // four horizontal lanes: height picks the string, left-right bows
+    along=dx;bowPos=posFromLane(e.clientY-r.top);
+  }else{                              // follow the drawn bow: along the stick bows, across it changes strings
+    const {ux,uy}=bowAxis(bowP.rx,bowP.ry);
+    along=dx*ux+dy*uy;
+    const across=dx*uy-dy*ux;
+    bowPos=Math.max(0,Math.min(3,bowPos+across/(WH*.84/3)));
+  }
+  bowP.rx=e.clientX-r.left;bowP.ry=e.clientY-r.top;
+  const v=Math.abs(along)/dt*1000; bowP.v=bowP.v*.6+v*.4;
+  const dir=Math.sign(along); if(dir&&bowP.dir&&dir!==bowP.dir&&Math.abs(along)>1) bowP.change=now; if(dir) bowP.dir=dir;
+  if(Math.hypot(e.clientX-bowP.x0,e.clientY-bowP.y0)>6) bowP.moved=true;
+  bowP.x=e.clientX;bowP.y=e.clientY;bowP.t=now;
+  trail.push({x:bowP.rx,y:bowP.ry,t:now});if(trail.length>80)trail.shift();});
+const bUp=e=>{if(!bowP||e.pointerId!==bowP.id)return;
+  if(S.pizz&&!S.autoBow&&!bowP.moved&&performance.now()-bowP.t0<260){bowStrings().forEach(st=>pluck(pitchOf(st)));lastPizz={st:bowStrings(),t:performance.now()};}
+  bowP=null;};
+bowEl.addEventListener("pointerup",bUp);bowEl.addEventListener("pointercancel",bUp);
+let lastPizz=null;
+
+/* ---------- main loop: sound + drawing ---------- */
+let autoPhase=0;
+/* which strings sound: with the auto bow, a touch in the bow area picks strings, otherwise the
+   strings your left hand presses (or the last bow string when using the barre line) */
+function activeStrings(){
+  if(!S.autoBow||bowP) return bowStrings();
+  const st=new Set();let barre=false;
+  fingers.forEach(f=>{if(f.all)barre=true;else st.add(f.st);});
+  if(st.size) return [...st].sort();
+  if(barre){const p=Math.max(0,Math.min(3,bowPos)), k=Math.round(p), off=p-k;
+    return S.dbl&&Math.abs(off)>.3?[Math.floor(p),Math.ceil(p)]:[k];}
+  return [];
+}
+function frame(){
+  const now=performance.now();
+  // bow speed decays quickly when the finger stops
+  let target=0;
+  if(bowP){const idle=now-bowP.t;bowP.v*=idle>40?.7:1;target=Math.min(1,Math.pow(bowP.v/900,.7));
+    if(bowP.change&&now-bowP.change<60) target*=.35;}   // bow change: brief dip
+  const on=activeStrings();
+  if(S.autoBow){                         // the bow strokes by itself; strokes reverse with a short dip
+    const per=S.autoSpeed, ph=(now/1000/per)%1, edge=Math.min(ph,1-ph);
+    autoPhase=now/1000/per;
+    target=on.length?S.autoLevel*(edge<.06?.35+edge/.06*.65:1):0;
+  }
+  bowAmp+= (target-bowAmp)*(target>bowAmp?.35:.25);
+  if(ac){const t=ac.currentTime;
+    STR.forEach((s,i)=>{const v=voices[i];const m=pitchOf(i), f=hz(m);
+      const a=on.includes(i)?bowAmp*(on.length>1?.75:1):0;
+      v.o.forEach(o=>o.frequency.setTargetAtTime(f,t,.012));
+      v.out.gain.setTargetAtTime(a*.32,t,.025);
+      const bright=S.tone==="bright"?1.35:S.tone==="warm"?.7:1;
+      v.lp.frequency.setTargetAtTime(Math.min(12000,f*(5+a*10)*bright),t,.03);
+      v.ng.gain.setTargetAtTime(a*.022,t,.03);
+      if(a>.02){if(!v.on)v.on=now;}else v.on=0;
+      const vibOn=S.vib&&v.on&&now-v.on>350;
+      v.vg.gain.setTargetAtTime(vibOn?S.vibDepth:0,t,vibOn?.25:.05);});
+    if(reverbGain) reverbGain.gain.setTargetAtTime(S.room,t,.1);
+  }
+  readout(on);
+  drawBoard(on);drawBow(on);
+  requestAnimationFrame(frame);
+}
+function readout(on){
+  const noteEl=document.getElementById("note"), sub=document.getElementById("sub");
+  let list=on.length&&bowAmp>.03?on:(lastPizz&&performance.now()-lastPizz.t<700?lastPizz.st:[]);
+  if(!list.length){
+    const f=[...fingers.values()].pop();
+    if(f){const m=pitchOf(f.st);noteEl.textContent=nm(m);noteEl.style.opacity=.45;sub.innerHTML=`${STR[f.st].num}번 줄(${STR[f.st].n})을 짚는 중 · 활을 대면 소리가 나요`;}
+    else {noteEl.style.opacity=.35;}
+    return;
+  }
+  noteEl.style.opacity=1;
+  const ms=list.map(pitchOf);
+  noteEl.style.color=S.octCol?octCol(ms[0]):"";
+  noteEl.textContent=ms.map(nm).join(" + ");
+  const m=ms[0], c=Math.round((m-Math.round(m))*100);
+  sub.innerHTML=`${list.map(i=>STR[i].num+"번 줄 "+STR[i].n).join(" · ")}${list.length>1?" (겹음)":""} · ${hz(m).toFixed(1)} Hz <span class="cents"><i style="left:${50+c}%"></i></span> ${c>0?"+":""}${c}`;
+}
+/* octave colours (same palette as the clarinet / sax pages) */
+const OCTC={3:"#4fc08e",4:"#6c97ff",5:"#a986ff",6:"#ff73ad",7:"#ff9d4a"};
+const octOf=m=>Math.floor(Math.round(m)/12)-1;
+const octCol=m=>OCTC[Math.max(3,Math.min(7,octOf(m)))];
+function drawBoard(on){
+  const W=BW,H=BH;if(!W)return;
+  xb.clearRect(0,0,W,H);
+  // tapered fingerboard
+  xb.fillStyle=css("--bg");xb.fillRect(0,0,W,H);
+  xb.fillStyle=css("--ebony");xb.beginPath();xb.moveTo(W*.16,0);xb.lineTo(W*.84,0);xb.lineTo(W*.98,H);xb.lineTo(W*.02,H);xb.closePath();xb.fill();
+  xb.fillStyle=css("--tape");xb.globalAlpha=.85;xb.fillRect(W*.14,0,W*.72,NUT);xb.globalAlpha=1;
+  xb.fillStyle="#3a2a20";xb.fillRect(W*.14,NUT-4,W*.72,4);   // the nut itself
+  for(let s=1;s<=S.span;s++){const y=yOfSemi(s);
+    xb.strokeStyle="rgba(255,255,255,.07)";xb.lineWidth=1;xb.beginPath();xb.moveTo(0,y);xb.lineTo(W,y);xb.stroke();
+    if([2,4,5,7,12].includes(s)){xb.fillStyle=css("--tape");xb.globalAlpha=.32;xb.fillRect(W*.08,y-2,W*.84,4);xb.globalAlpha=1;}}
+  const step=(H-NUT-8)/S.span;
+  STR.forEach((st,i)=>{const x=colX(colOf(i)), active=on.includes(i)&&bowAmp>.03;
+    const wob=active?Math.sin(performance.now()/18+i)*bowAmp*1.6:0;
+    xb.strokeStyle=active?css("--hot"):css("--string");xb.lineWidth=1.2+i*.7;
+    xb.beginPath();xb.moveTo(x+wob,0);xb.lineTo(x-wob,H);xb.stroke();
+    if(S.octCol){ // translucent coloured sleeve along the string, changing colour where the octave changes
+      xb.save();xb.globalAlpha=.32;xb.lineWidth=10;xb.lineCap="butt";
+      for(let s=0;s<=S.span;s++){const y0=s===0?NUT:yOfSemi(s-.5)+0, y1=Math.min(H,yOfSemi(s+.5));
+        xb.strokeStyle=octCol(st.m+s);xb.beginPath();xb.moveTo(x,Math.max(NUT,y0));xb.lineTo(x,y1);xb.stroke();}
+      xb.restore();}
+    if(S.label!=="none"){xb.font="600 10px IBM Plex Sans KR, sans-serif";xb.textAlign="left";
+      for(let s=1;s<=S.span;s++){const m=st.m+s, pc=m%12;if(S.snap==="scale"&&!SCALES[S.scale].includes(pc))continue;
+        xb.fillStyle=S.octCol?octCol(m):"rgba(255,255,255,.45)";
+        xb.fillText((S.label==="sol"?SOL:NAMES)[pc]+(S.octCol&&S.label!=="sol"?octOf(m):""),x+6,yOfSemi(s)-step/2+4);}}
+    const openOn=[...fingers.values()].some(f=>(f.all||f.st===i)&&f.y<NUT);
+    if(openOn){xb.fillStyle=active?css("--hot"):"rgba(255,240,210,.9)";xb.beginPath();xb.arc(x,NUT*.45,13,0,Math.PI*2);xb.fill();}
+    xb.font="800 13px Fraunces, serif";xb.fillStyle=css("--ink");xb.textAlign="center";xb.fillText(st.n,x,NUT*.45+2);
+    xb.font="600 9px IBM Plex Sans KR, sans-serif";xb.fillStyle=css("--muted");xb.fillText("개방",x,NUT*.45+14);xb.textAlign="left";
+  });
+  fingers.forEach(f=>{
+    if(!f.all) return;
+    const yl=yOfSemi(f.s), x0=Math.min(...[0,1,2,3].map(colX))-16, x1=Math.max(...[0,1,2,3].map(colX))+16;
+    if(S.barreStyle==="dash"){xb.save();xb.setLineDash([7,6]);xb.strokeStyle=css("--hot");xb.lineWidth=3;xb.beginPath();xb.moveTo(x0,yl);xb.lineTo(x1,yl);xb.stroke();xb.restore();}
+    else{xb.save();xb.shadowColor="rgba(255,255,255,.95)";xb.shadowBlur=16;xb.strokeStyle="rgba(255,255,255,.95)";xb.lineWidth=4;xb.beginPath();xb.moveTo(x0,yl);xb.lineTo(x1,yl);xb.stroke();xb.restore();}
+    // every string gets stopped there (snapping may move each string a little)
+    STR.forEach((st,i)=>{const sn=snapSemi(i,f.s), x=colX(colOf(i)), y=yOfSemi(sn), act=bowStrings().includes(i)&&bowAmp>.03;
+      xb.fillStyle=act?css("--hot"):(S.octCol?octCol(st.m+sn):"rgba(255,240,210,.85)");xb.beginPath();xb.arc(x,y,act?11:8,0,Math.PI*2);xb.fill();
+      xb.fillStyle=css("--ebony");xb.font="800 9px Fraunces, serif";xb.textAlign="center";xb.fillText(nm(st.m+sn).replace(/-?\d+$/,""),x,y+3);xb.textAlign="left";});
+    xb.fillStyle="rgba(255,255,255,.35)";xb.beginPath();xb.arc(f.x,f.y,16,0,Math.PI*2);xb.fill();
+  });
+  fingers.forEach(f=>{if(f.all)return;const s=snapSemi(f.st,f.s), x=colX(colOf(f.st)), y=yOfSemi(s);
+    xb.fillStyle=S.octCol?octCol(STR[f.st].m+s):"rgba(255,240,210,.92)";xb.beginPath();xb.arc(x,y,13,0,Math.PI*2);xb.fill();
+    xb.fillStyle=css("--ebony");xb.font="800 10px Fraunces, serif";xb.textAlign="center";xb.fillText(nm(STR[f.st].m+s).replace(/-?\d+$/,""),x,y+3.5);xb.textAlign="left";
+    if(S.snap!=="free"){xb.strokeStyle="rgba(255,240,210,.35)";xb.beginPath();xb.arc(f.x,f.y,6,0,Math.PI*2);xb.stroke();}});
+}
+/* bridge seen from below, pushed to the lower left; the bow pivots around the middle of the area
+   with its grip on the right: raise the grip -> the left end drops onto the 1st string, lower it -> 4th string */
+let bowShift=0;
+const trail=[];
+/* a carved maple bridge seen from the tailpiece side, sitting low on the left */
+function bridgeGeo(){
+  const W=WW,H=WH, bw=Math.min(W*.2,H*.62), bh=Math.min(H*.62,bw*1.05), cx=W*.25, top=H-bh-2;
+  return {W,H,bw,bh,cx,top,X:u=>cx+u*bw,Y:v=>top+v*bh};
+}
+function bridgePts(){
+  const g=bridgeGeo(), us=[.78,.26,-.26,-.78];                 // 0=E … 3=G -> G D A E from the left
+  return {...g,pts:us.map(u=>({x:g.X(u),y:g.Y(.13*u*u)}))};
+}
+function bridgePath(g){
+  const X=g.X,Y=g.Y, P=new Path2D();
+  P.moveTo(X(-1),Y(.15));
+  P.quadraticCurveTo(X(0),Y(-.13),X(1),Y(.15));                 // arched top
+  P.quadraticCurveTo(X(1.04),Y(.26),X(.93),Y(.34));              // right ear
+  P.bezierCurveTo(X(.62),Y(.4),X(.55),Y(.56),X(.74),Y(.66));     // right kidney cut
+  P.quadraticCurveTo(X(.96),Y(.78),X(.98),Y(1));                 // flare to the foot
+  P.lineTo(X(.5),Y(1));
+  P.quadraticCurveTo(X(.42),Y(.84),X(0),Y(.82));                 // arch between the feet
+  P.quadraticCurveTo(X(-.42),Y(.84),X(-.5),Y(1));
+  P.lineTo(X(-.98),Y(1));
+  P.quadraticCurveTo(X(-.96),Y(.78),X(-.74),Y(.66));
+  P.bezierCurveTo(X(-.55),Y(.56),X(-.62),Y(.4),X(-.93),Y(.34));
+  P.quadraticCurveTo(X(-1.04),Y(.26),X(-1),Y(.15));
+  P.closePath();
+  return P;
+}
+function heartPath(g){
+  const X=g.X,Y=g.Y,P=new Path2D();
+  P.moveTo(X(0),Y(.62));
+  P.bezierCurveTo(X(-.05),Y(.55),X(-.2),Y(.5),X(-.14),Y(.41));
+  P.bezierCurveTo(X(-.09),Y(.35),X(-.02),Y(.38),X(0),Y(.43));
+  P.bezierCurveTo(X(.02),Y(.38),X(.09),Y(.35),X(.14),Y(.41));
+  P.bezierCurveTo(X(.2),Y(.5),X(.05),Y(.55),X(0),Y(.62));
+  P.closePath();return P;
+}
+function drawBow(on){
+  const W=WW,H=WH;if(!W)return;
+  xw.clearRect(0,0,W,H);
+  const g=bridgePts(), mirror=flip();
+  xw.save();if(mirror){xw.translate(W,0);xw.scale(-1,1);}
+  // shadow, wood, grain, cut-outs
+  const body=bridgePath(g);
+  xw.save();xw.translate(4,5);xw.fillStyle="rgba(0,0,0,.25)";xw.fill(body);xw.restore();
+  const wood=xw.createLinearGradient(g.X(-1),0,g.X(1),0);
+  wood.addColorStop(0,"#d8b47a");wood.addColorStop(.45,"#f1d9a8");wood.addColorStop(.55,"#ecd09a");wood.addColorStop(1,"#c99a5c");
+  xw.fillStyle=wood;xw.fill(body);
+  xw.save();xw.clip(body);xw.strokeStyle="rgba(120,80,30,.16)";xw.lineWidth=1;
+  for(let k=-6;k<=6;k++){xw.beginPath();xw.moveTo(g.X(k*.16),g.Y(-.1));xw.bezierCurveTo(g.X(k*.16+.05),g.Y(.3),g.X(k*.16-.05),g.Y(.7),g.X(k*.16+.02),g.Y(1.05));xw.stroke();}
+  xw.restore();
+  xw.save();xw.globalCompositeOperation="destination-out";xw.fill(heartPath(g));xw.restore();
+  xw.strokeStyle="rgba(110,70,30,.75)";xw.lineWidth=1.4;xw.stroke(body);xw.stroke(heartPath(g));
+  // strings resting in the notches (seen end-on)
+  g.pts.forEach((p,i)=>{const act=on.includes(i)&&bowP;
+    xw.fillStyle=act?css("--hot"):"#2a1a10";xw.beginPath();xw.arc(p.x,p.y-4,act?6.5:4.5,0,Math.PI*2);xw.fill();
+    if(act){xw.strokeStyle=css("--hot");xw.globalAlpha=.5;xw.beginPath();xw.arc(p.x,p.y-4,11,0,Math.PI*2);xw.stroke();xw.globalAlpha=1;}
+    xw.save();if(mirror){xw.translate(p.x,0);xw.scale(-1,1);xw.translate(-p.x,0);}
+    xw.font="800 12px Fraunces, serif";xw.fillStyle="#5a3a1c";xw.textAlign="center";xw.fillText(STR[i].n,p.x,p.y+16);xw.restore();});
+  if(S.bowMode==="zones"){xw.restore();xw.save();
+    const lanes=[3,2,1,0];   // top lane = G … bottom lane = E
+    lanes.forEach((st,k)=>{const y0=H*(.08+.84*k/4), h=H*.84/4, act=on.includes(st)&&bowP;
+      xw.fillStyle=act?`rgba(255,215,140,${.12+bowAmp*.35})`:(k%2?"rgba(0,0,0,.07)":"rgba(255,255,255,.05)");xw.fillRect(0,y0,W,h);
+      xw.strokeStyle="rgba(255,255,255,.18)";xw.setLineDash([4,6]);xw.beginPath();xw.moveTo(0,y0);xw.lineTo(W,y0);xw.stroke();xw.setLineDash([]);
+      xw.font="800 12px Fraunces, serif";xw.fillStyle="rgba(255,255,255,.75)";xw.textAlign="right";xw.fillText(`${STR[st].num} ${STR[st].n}`,W-8,y0+h/2+4);xw.textAlign="left";});
+    if(mirror){xw.translate(W,0);xw.scale(-1,1);}
+  }
+  // contact point on the arch for the current bow height
+  const pp=Math.max(0,Math.min(3,bowPos)), a=Math.min(2,Math.floor(pp)), t=pp-a;
+  const P=g.pts[a],Q=g.pts[a+1], cx=P.x+(Q.x-P.x)*t, cy=P.y+(Q.y-P.y)*t-10;
+  // the grip sits under the finger; the bow runs from the grip to the string it touches
+  let F=bowP?{x:bowP.rx,y:bowP.ry}:{x:W*.78,y:H*(.08+.84*(3-bowPos)/3)};
+  if(mirror) F={x:W-F.x,y:F.y};
+  let ux=F.x-cx, uy=F.y-cy; const len=Math.hypot(ux,uy)||1; ux/=len; uy/=len;
+  if(S.autoBow){const ph=autoPhase%1, tri=(ph<.5?ph*2:2-ph*2)-.5, sl=tri*W*.28;F={x:F.x+ux*sl,y:F.y+uy*sl};}
+  const BOW=Math.hypot(W,H)*.92;   // one fixed bow length for this screen, long enough to reach any string
+  const A0={x:F.x-ux*BOW,y:F.y-uy*BOW}, A1={x:F.x+ux*W*.06,y:F.y+uy*W*.06};
+  if(S.guide){
+    // rail: the direction to stroke in for the current string
+    xw.save();xw.globalAlpha=bowP?.22:.12;xw.strokeStyle="#fff";xw.lineWidth=28;xw.lineCap="round";
+    xw.beginPath();xw.moveTo(cx+ux*10,cy+uy*10);xw.lineTo(F.x+ux*W*.12,F.y+uy*W*.12);xw.stroke();xw.restore();
+    // fan: where the bow would point for each string from the grip
+    if(S.bowMode!=="zones") g.pts.forEach((p,i)=>{const cur=on.includes(i)&&bowP;
+      xw.save();xw.setLineDash([3,7]);xw.strokeStyle=cur?css("--hot"):"rgba(255,255,255,.45)";xw.lineWidth=cur?2:1.2;
+      xw.beginPath();xw.moveTo(F.x,F.y);xw.lineTo(p.x,p.y-10);xw.stroke();xw.restore();
+      const mx=F.x+(p.x-F.x)*.55, my=F.y+(p.y-10-F.y)*.55;
+      xw.save();if(mirror){xw.translate(mx,0);xw.scale(-1,1);xw.translate(-mx,0);}
+      xw.font="800 11px Fraunces, serif";xw.fillStyle=cur?css("--hot"):"rgba(255,255,255,.7)";xw.textAlign="center";xw.fillText(STR[i].n,mx,my-4);xw.restore();});
+  }
+  xw.globalAlpha=bowP?1:.5;
+  xw.strokeStyle=css("--hair");xw.lineWidth=5;xw.beginPath();xw.moveTo(A0.x,A0.y);xw.lineTo(A1.x,A1.y);xw.stroke();
+  xw.strokeStyle="#5a3a22";xw.lineWidth=3;xw.beginPath();xw.moveTo(A0.x+uy*7,A0.y-ux*7);xw.lineTo(A1.x+uy*7,A1.y-ux*7);xw.stroke();
+  const ang=Math.atan2(uy,ux);
+  xw.save();xw.translate(F.x,F.y);xw.rotate(ang);xw.fillStyle="#2a1a10";xw.fillRect(-18,-12,36,16);xw.fillStyle=css("--hot");xw.fillRect(-4,-9,8,8);xw.restore();
+  xw.globalAlpha=1;
+  xw.restore();
+  if(S.guide){const now=performance.now();while(trail.length&&now-trail[0].t>700)trail.shift();
+    for(let i=1;i<trail.length;i++){const a=1-(now-trail[i].t)/700;
+      xw.strokeStyle=`rgba(255,235,190,${a*.8})`;xw.lineWidth=2+a*5;xw.lineCap="round";
+      xw.beginPath();xw.moveTo(trail[i-1].x,trail[i-1].y);xw.lineTo(trail[i].x,trail[i].y);xw.stroke();}}
+  xw.font="600 10px IBM Plex Sans KR, sans-serif";xw.fillStyle="rgba(255,255,255,.78)";xw.textAlign="right";
+  xw.fillText("활을 잡은 높이: 위 = 먼 G줄 · 가운데 = D·A 두 줄 · 아래 = 가까운 E줄 · 좌우로 문지르기",W-8,14);xw.textAlign="left";
+}
+
+/* ---------- settings ---------- */
+const dlg=document.getElementById("dlg");
+document.getElementById("gear").onclick=()=>{render();dlg.showModal();};
+document.getElementById("closeBtn").onclick=()=>dlg.close();
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
+function seg(id,opts,key){const box=document.getElementById(id);box.innerHTML="";
+  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));b.onclick=()=>{S[key]=v;save();render();};box.appendChild(b);});}
+function render(){
+  seg("sSnap",[["free","자유롭게 (실제처럼)"],["semi","반음에 맞추기"],["scale","음계에 맞추기"]],"snap");
+  seg("sScale",Object.keys(SCALES).map(k=>[k,k+" 장조"]),"scale");
+  seg("sAuto",[[false,"끄기 (직접 긋기)"],[true,"켜기"]],"autoBow");
+  seg("sAutoSpeed",[[2.4,"느리게"],[1.4,"보통"],[.7,"빠르게"]],"autoSpeed");
+  seg("sAutoLevel",[[.45,"여리게"],[.75,"보통"],[1,"세게"]],"autoLevel");
+  seg("sGuide",[[true,"보이기"],[false,"숨기기"]],"guide");
+  seg("sBowMode",[["bow","활 모양대로 (각도)"],["zones","4구역 (높이로 줄 선택)"]],"bowMode");
+  seg("sBarre",[[false,"줄마다 짚기 (실제처럼)"],[true,"가로선으로 네 줄 다 짚기"]],"barre");
+  seg("sBarreStyle",[["glow","하얀 빛"],["dash","노란 점선"]],"barreStyle");
+  seg("sGap",[[.55,"좁게"],[.8,"보통"],[1,"넓게"]],"gap");
+  seg("sSpan",[[12,"한 옥타브"],[19,"한 옥타브 반"],[24,"두 옥타브"]],"span");
+  seg("sOctCol",[[false,"끄기"],[true,"켜기"]],"octCol");
+  seg("sLabel",[["note","C D E"],["sol","도 레 미"],["none","숨기기"]],"label");
+  seg("sDouble",[[true,"켜기"],[false,"끄기"]],"dbl");
+  seg("sPizz",[[true,"피치카토 (튕기기)"],[false,"아무것도 안 함"]],"pizz");
+  seg("sHand",[["right","기본"],["left","좌우 반전 (왼손잡이)"]],"hand");
+  seg("sTone",[["warm","따뜻하게"],["normal","보통"],["bright","맑고 밝게"]],"tone");
+  seg("sRoom",[[0,"없음"],[.22,"작은 홀"],[.45,"큰 홀"]],"room");
+  seg("sVib",[[false,"끄기"],[true,"켜기"]],"vib");
+  seg("sTune",[[440,"A4 = 440"],[442,"A4 = 442"]],"a4");
+}
+resize();requestAnimationFrame(frame);
+</script>
+</body>
+</html>

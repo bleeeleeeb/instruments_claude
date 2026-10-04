@@ -152,6 +152,7 @@ body.swap .right{order:-1} body.swap .left{order:5}
 .tdel{border:0;background:transparent;color:var(--muted);font-size:.78rem;cursor:pointer}
 .dlist{display:flex;flex-direction:column;gap:6px;margin-top:4px}
 .dsong{border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:.9rem;font-weight:500;text-align:left;cursor:pointer}
+.dsong.edm{background:linear-gradient(90deg,#2a1b5c,#7b2fd0,#1f8fbf);color:#fff;border:0;font-weight:700}
 .dsong.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);text-align:center;font-weight:600}
 .dnote{font-size:.76rem;color:var(--muted);margin:6px 0 0}
 @media (prefers-reduced-motion:reduce){.ff.hold,.ff.trail{animation:none}.harp.gliding .strip{transition:none}}
@@ -200,7 +201,19 @@ body.portrait .ib{padding:0 8px}
 dialog{border:0;padding:0;background:transparent;max-width:none;width:100%;max-height:100%;margin:0;inset:auto 0 0 0;position:fixed}
 dialog::backdrop{background:rgba(0,0,0,.4)}
 .sheet{background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;max-width:640px;margin:0 auto;padding:14px 18px calc(16px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
-.sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;position:sticky;top:-14px;background:var(--surface);z-index:5;padding:6px 0}
+.setsheet{display:flex;flex-direction:column;height:min(90vh,760px);overflow:hidden;padding-bottom:0}
+.sethead{flex:0 0 auto}
+.sethead header{position:static;padding:0}
+.tabs{display:flex;gap:6px;margin:6px 0 4px}
+.tabs button{flex:1;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--muted);font:700 .88rem var(--body);padding:8px 4px;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.pager{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -18px}
+.pager::-webkit-scrollbar{display:none}
+.page{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:0 18px calc(16px + env(safe-area-inset-bottom,0px))}
+.keys2{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.84rem;align-items:center}
+.keys2 span:nth-child(odd){white-space:nowrap}
+kbd{display:inline-block;min-width:22px;padding:2px 6px;margin-right:3px;border:1.5px solid var(--line);border-bottom-width:3px;border-radius:6px;font:700 .75rem var(--display);text-align:center;background:var(--bg)}
 .sheet h2{font-family:var(--display);font-weight:800;font-size:1.25rem;margin:0}
 .close{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:7px 16px;font-weight:600;cursor:pointer}
 .grp{padding:10px 0;border-top:1px solid var(--line)}
@@ -270,35 +283,54 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 
 
 <dialog id="dlg">
-  <div class="sheet">
-    <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
-    <div class="cols">
-      <div>
-        <div class="grp"><h3>홀 이동 방식</h3><div class="seg" id="sMode"></div></div>
-        <div class="grp"><h3>감도 (한 홀당 각도)</h3><div class="seg" id="sDeg"></div></div>
-        <div class="grp">
-          <label class="tg"><span>방향 반전<small>움직이는 방향과 홀 방향이 반대로 느껴질 때</small></span><input type="checkbox" id="sInv"></label>
+  <div class="sheet setsheet">
+    <div class="sethead">
+      <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+      <div class="tabs" id="setTabs"><button data-p="0">조작</button><button data-p="1">음 · 튜닝 · 키</button><button data-p="2">기타</button></div>
+    </div>
+    <div class="pager" id="pager">
+      <section class="page">
+        <div class="grp"><h3>조작 환경</h3><div class="seg" id="sPlat"></div></div>
+        <div id="pgMobile">
+          <div class="grp"><h3>홀 이동 방식</h3><div class="seg" id="sMode"></div>
+            <h3 style="margin-top:10px">감도 (한 홀당 각도)</h3><div class="seg" id="sDeg"></div>
+            <label class="tg"><span>방향 반전<small>움직이는 방향과 홀 방향이 반대로 느껴질 때</small></span><input type="checkbox" id="sInv"></label></div>
+          <div class="grp"><h3>입력 버튼 위치</h3><div class="seg" id="sSide"></div><h3 style="margin-top:10px">위아래 배치</h3><div class="seg" id="sInvV"></div></div>
+          <div class="grp"><h3>블로·드로 버튼 모드</h3><div class="seg" id="sFlip"></div>
+            <h3 style="margin-top:10px">화음 영역 (바깥쪽 1/3을 누르면 3음)</h3><div class="seg" id="sChordA"></div>
+            <div id="gFlip"><h3 style="margin-top:10px">자동 전환 영역 나누기</h3><div class="seg" id="sShape"></div>
+            <h3 style="margin-top:10px">1번 홀에서 위쪽 전환 영역</h3><div class="seg" id="sFStart"></div></div></div>
+          <div class="grp"><h3>벤딩 버튼</h3><div class="seg" id="sBend1"></div>
+            <h3 style="margin-top:10px">기본음 칸</h3><div class="seg" id="sBendBase"></div>
+            <h3 style="margin-top:10px">벤딩 깊이 방향</h3><div class="seg" id="sBdir"></div></div>
         </div>
-      </div>
-      <div>
-        <div class="grp">
-          <div class="seg" id="sBend1" style="margin-bottom:8px"></div>
-          <div class="seg" id="sForce" style="margin-bottom:8px"></div>
-          <h3 style="margin:6px 0 6px">기본음 칸</h3><div class="seg" id="sBendBase" style="margin-bottom:8px"></div>
-          <h3 style="margin:6px 0 6px">벤딩 칸 글자</h3><div class="seg" id="sBendLbl" style="margin-bottom:8px"></div>
-          <label class="tg"><span>오버벤딩 사용<small>벤딩 쪽 맨 위·맨 아래 1/8에 오버블로·오버드로</small></span><input type="checkbox" id="sOver"></label>
-          <div class="seg" id="sBdir" style="margin-bottom:8px"></div>
-          <label class="tg"><span>칸마다 딱딱 끊어서 소리 내기<small>끄면 손가락 위치대로 미끄러지듯 휘어짐</small></span><input type="checkbox" id="sSnap"></label>
+        <div id="pgPc">
+          <div class="grp"><h3>키보드</h3>
+            <div class="keys2">
+              <span><kbd>←</kbd><kbd>→</kbd> 또는 <kbd>A</kbd><kbd>D</kbd></span><span>홀 이동</span>
+              <span><kbd>↑</kbd> 또는 <kbd>W</kbd></span><span>블로 (누르는 동안)</span>
+              <span><kbd>↓</kbd> 또는 <kbd>S</kbd></span><span>드로 (누르는 동안)</span>
+              <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span>벤딩 반음·온음·온음 반 (함께 누르기)</span>
+              <span><kbd>Q</kbd></span><span>오버블로·오버드로</span>
+              <span><kbd>C</kbd></span><span>누르는 동안 3음 화음</span>
+              <span><kbd>Space</kbd></span><span>자동 연주 정지</span>
+            </div></div>
+          <div class="grp"><h3>마우스 휠</h3><div class="seg" id="sWheelDir"></div>
+            <h3 style="margin-top:10px">휠 감도 (몇 칸 굴리면 한 홀)</h3><div class="seg" id="sWheelStep"></div></div>
         </div>
-        <div class="grp"><h3>입력 버튼 위치</h3><div class="seg" id="sSide"></div><h3 style="margin-top:10px">위아래 배치</h3><div class="seg" id="sInvV"></div></div>
-        <div class="grp"><h3>블로·드로 버튼 모드</h3><div class="seg" id="sFlip"></div>
-          <h3 style="margin-top:10px">화음 영역 (바깥쪽 1/3을 누르면 3음)</h3><div class="seg" id="sChordA"></div>
-          <div id="gFlip"><h3 style="margin-top:10px">자동 전환 영역 나누기</h3><div class="seg" id="sShape"></div>
-          <h3 style="margin-top:10px">1번 홀에서 위쪽 전환 영역</h3><div class="seg" id="sFStart"></div></div></div>
-        <div class="grp"><h3>소리 나는 홀 수</h3><div class="seg" id="sVoices"></div></div>
+      </section>
+      <section class="page">
         <div class="grp"><h3>하모니카 키</h3><div class="seg" id="sKey"></div><h3 style="margin-top:10px">튜닝</h3><div class="seg" id="sTuning"></div></div>
         <div class="grp"><h3>기준음</h3><div class="seg" id="sTune"></div></div>
-      </div>
+        <div class="grp"><h3>소리 나는 홀 수</h3><div class="seg" id="sVoices"></div></div>
+        <div class="grp"><h3>벤딩 규칙</h3><div class="seg" id="sForce"></div>
+          <label class="tg"><span>오버벤딩 사용<small>벤딩 쪽 맨 위·맨 아래 1/8에 오버블로·오버드로</small></span><input type="checkbox" id="sOver"></label></div>
+      </section>
+      <section class="page">
+        <div class="grp"><h3>벤딩 칸 글자</h3><div class="seg" id="sBendLbl"></div></div>
+        <div class="grp"><label class="tg"><span>칸마다 딱딱 끊어서 소리 내기<small>끄면 손가락 위치대로 미끄러지듯 휘어짐</small></span><input type="checkbox" id="sSnap"></label></div>
+        <div class="grp"><h3>초기화</h3><button class="dsong" id="resetBtn">모든 설정을 처음 상태로</button></div>
+      </section>
     </div>
   </div>
 </dialog>
@@ -336,7 +368,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
         <div class="grp"><h3>빠르기 (BPM)</h3><div class="seg" id="tBpm"></div></div>
         <div class="grp"><h3>숫자 하나 길이</h3><div class="seg" id="tBase"></div></div>
         <div class="grp"><h3>리듬</h3><div class="seg" id="tSwing"></div></div>
-        <div class="grp"><div class="seg"><button id="tabSave">저장</button><button id="tabEx">예시 넣기</button></div><div id="tabSaved" class="dlist"></div></div>
+        <div class="grp"><h3>드럼</h3><div class="seg" id="tDrums"></div></div>
+        <div class="grp"><div class="seg"><button id="tabSave">저장</button><button id="tabEx">예시 넣기</button><button id="tabEdm">EDM 넣기</button></div><div id="tabSaved" class="dlist"></div></div>
       </div>
     </div>
     <p class="dnote">숫자 = 블로, −숫자 = 드로, ′ 벤딩(개수만큼 반음), o 오버, ≡ 3음 화음, ~ 비브라토, . 스타카토, _ 길게, r 쉼표, ( … )×2 반복</p>
@@ -373,7 +406,7 @@ const OD={7:85,9:92,10:97,8:89};
 const NAMES=["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
 const KEYS=[["G",-5],["A",-3],["B♭",-2],["C",0],["D",2],["E",4],["F",5]];
 
-const DEF={bendBase:true,bendLbl:"both",tuning:"richter",force:false,tabText:"",tabBpm:100,tabBase:1,tabSwing:false,rate:1,bend1:false,chordA:false,invV:false,side:"right",flip:"off",shape:"auto",fstart:"blow",voices:1,bdir:"center",mode:"yaw",deg:7,inv:false,over:true,snap:false,key:0,a4:440};
+const DEF={plat:(matchMedia&&matchMedia("(pointer:coarse)").matches)?"mobile":"pc",wheelInv:false,wheelStep:1,tabDrums:false,bendBase:true,bendLbl:"both",tuning:"richter",force:false,tabText:"",tabBpm:100,tabBase:1,tabSwing:false,rate:1,bend1:false,chordA:false,invV:false,side:"right",flip:"off",shape:"auto",fstart:"blow",voices:1,bdir:"center",mode:"yaw",deg:7,inv:false,over:true,snap:false,key:0,a4:440};
 let S={...DEF};
 try{const v=JSON.parse(localStorage.getItem("harp-sim")||"null");if(v)S={...DEF,...v};}catch(e){}
 const save=()=>{try{localStorage.setItem("harp-sim",JSON.stringify(S));}catch(e){}};
@@ -560,7 +593,7 @@ document.querySelectorAll(".left,.right").forEach(col=>{
 const effDir=()=>(leftK==="db"||leftK==="od")?"draw":(leftK==="bb"||leftK==="ob")?"blow":resolveDir(dir);
 let curChord=1;
 let pbChord=false, pbVib=false;
-const V=()=>pbActive?(pbChord?3:1):(S.chordA?curChord:S.voices);
+const V=()=>pbActive?(pbChord?3:1):(typeof kbChord!=="undefined"&&kbChord?3:(S.chordA?curChord:S.voices));
 
 /* ---------- pitch logic ---------- */
 /* returns list of notes; in 3-hole mode bends/overbends act on the centre hole */
@@ -698,7 +731,8 @@ function initAudio(){
     o1.detune.value=o2.detune.value=0;o1.start();o2.start();
     voices.push({o:[o1,o2],vg});
   }
-  lp.connect(pk);pk.connect(g);g.connect(ac.destination);lfo.start();
+  duck=ac.createGain();duck.gain.value=1;
+  lp.connect(pk);pk.connect(g);g.connect(duck);duck.connect(ac.destination);lfo.start();
 }
 const hz=m=>S.a4*Math.pow(2,(m-69)/12);
 function markHoles(){
@@ -747,6 +781,7 @@ function sound(){
 
 /* ---------- status / layout ---------- */
 function status(msg){
+  if(!msg&&S.plat==="pc"&&!pbActive){document.getElementById("status").textContent="←→ 홀 · ↑ 블로 · ↓ 드로 · 1~3 벤딩 · Q 오버 · C 화음 · 휠로도 이동";return;}
   const el=document.getElementById("status");
   if(msg){el.textContent=msg;return;}
   const mode={yaw:"좌우로 돌리기",tilt:"핸들처럼 기울이기",touch:"하모니카 드래그"}[S.mode];
@@ -794,6 +829,10 @@ function seg(id,opts,key){
     b.onclick=()=>{S[key]=v;save();if(key==="mode"){base=null;}applySettings();renderSettings();};box.appendChild(b);});
 }
 function renderSettings(){
+  seg("sPlat",[["mobile","모바일 (터치·센서)"],["pc","PC (키보드·마우스)"]],"plat");
+  document.getElementById("pgMobile").hidden=S.plat!=="mobile";document.getElementById("pgPc").hidden=S.plat!=="pc";
+  seg("sWheelDir",[[false,"아래로 굴리면 오른쪽(높은 홀)"],[true,"아래로 굴리면 왼쪽(낮은 홀)"]],"wheelInv");
+  seg("sWheelStep",[[1,"1칸"],[2,"2칸"],[3,"3칸"]],"wheelStep");
   seg("sMode",[["yaw","좌우로 돌리기"],["tilt","핸들처럼 기울이기"],["touch","터치 드래그"]],"mode");
   seg("sDeg",[[4,"4°"],[7,"7°"],[10,"10°"],[14,"14°"]],"deg");
   seg("sKey",KEYS.map(([n,v])=>[v,n]),"key");
@@ -814,6 +853,65 @@ function renderSettings(){
   seg("sTune",[[440,"A4 = 440"],[442,"A4 = 442"]],"a4");
   [["sInv","inv"],["sOver","over"],["sSnap","snap"]].forEach(([id,k])=>{const el=document.getElementById(id);el.checked=S[k];el.onchange=()=>{S[k]=el.checked;save();applySettings();};});
 }
+
+/* settings pager: tabs + horizontal swipe */
+const pager=document.getElementById("pager"), tabBtns=[...document.querySelectorAll("#setTabs button")];
+function markTab(i){tabBtns.forEach((b,j)=>b.setAttribute("aria-selected",String(i===j)));}
+tabBtns.forEach((b,i)=>b.onclick=()=>{pager.scrollTo({left:i*pager.clientWidth,behavior:"smooth"});markTab(i);});
+pager.addEventListener("scroll",()=>{markTab(Math.round(pager.scrollLeft/Math.max(1,pager.clientWidth)));},{passive:true});
+markTab(0);
+let resetArm=false;
+document.getElementById("resetBtn").onclick=e=>{
+  if(!resetArm){resetArm=true;e.target.textContent="한 번 더 누르면 초기화돼요";setTimeout(()=>{resetArm=false;e.target.textContent="모든 설정을 처음 상태로";},2500);return;}
+  S={...DEF};save();resetArm=false;e.target.textContent="모든 설정을 처음 상태로";applySettings();renderSettings();};
+
+/* ---------- PC: keyboard and mouse wheel ---------- */
+const kb={blow:false,draw:false,bend:0,over:false,chord:false};
+let kbChord=false;
+function kbMove(d){
+  const lo=1,hi=10;const h=Math.max(lo,Math.min(hi,hole+d));
+  if(S.mode!=="touch"){basePos=h;base=lastAngle;}
+  setPos(h);sound();
+}
+function kbApply(){
+  dir=kb.blow&&kb.draw?(kb.last||"blow"):kb.blow?"blow":kb.draw?"draw":null;
+  if(kb.over){leftK="o1";leftFrac=0;}
+  else if(kb.bend&&dir){const max=maxFor(hole,dir);leftK="b1";leftFrac=max?clampB(fracForBend(Math.min(kb.bend,max),max),0,1):0;}
+  else {leftK=null;leftFrac=0;}
+  kbChord=kb.chord;
+  sound();
+}
+const typing=e=>{const t=e.target;return t&&(t.tagName==="TEXTAREA"||t.tagName==="INPUT");};
+addEventListener("keydown",e=>{
+  if(typing(e)||document.querySelector("dialog[open]")) return;
+  const k=e.key.toLowerCase();
+  if(k===" "){if(pbActive){stopDemo();e.preventDefault();}return;}
+  if(e.repeat&&!["arrowleft","arrowright","a","d"].includes(k)) {if(["arrowup","arrowdown","w","s"].includes(k))e.preventDefault();return;}
+  if(k==="arrowleft"||k==="a"){kbMove(-1);e.preventDefault();}
+  else if(k==="arrowright"||k==="d"){kbMove(1);e.preventDefault();}
+  else if(k==="arrowup"||k==="w"){initAudio();kb.blow=true;kb.last="blow";kbApply();e.preventDefault();}
+  else if(k==="arrowdown"||k==="s"){initAudio();kb.draw=true;kb.last="draw";kbApply();e.preventDefault();}
+  else if(k==="1"||k==="2"||k==="3"){kb.bend=Math.max(kb.bend,+k);kbApply();}
+  else if(k==="q"){kb.over=true;kbApply();}
+  else if(k==="c"){kb.chord=true;kbApply();}
+});
+addEventListener("keyup",e=>{
+  const k=e.key.toLowerCase();
+  if(k==="arrowup"||k==="w"){kb.blow=false;kbApply();}
+  else if(k==="arrowdown"||k==="s"){kb.draw=false;kbApply();}
+  else if(k==="1"||k==="2"||k==="3"){kb.bend=0;kbApply();}
+  else if(k==="q"){kb.over=false;kbApply();}
+  else if(k==="c"){kb.chord=false;kbApply();}
+});
+let wheelAcc=0;
+addEventListener("wheel",e=>{
+  if(document.querySelector("dialog[open]")) return;
+  e.preventDefault();
+  const dlt=(Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY)*(S.wheelInv?-1:1);
+  wheelAcc+=e.deltaMode===1?dlt*33:dlt;
+  const stepPx=100*S.wheelStep;
+  while(Math.abs(wheelAcc)>=stepPx){kbMove(wheelAcc>0?1:-1);wheelAcc-=Math.sign(wheelAcc)*stepPx;}
+},{passive:false});
 
 /* ================= demo / MIDI auto-play with firefly ghosts ================= */
 function parseMidi(buf){
@@ -940,10 +1038,36 @@ function applyAction(a){
   if(be){const y=a.over?.5:bendY(be,leftK,Math.max(.12,leftFrac));holds.push(glow(be,y));}
   holds=holds.filter(Boolean);
 }
+/* ---------- EDM tech demo: written for a machine, not for human lungs ---------- */
+const EDM_TAB=`(-6. 5. 4. 5.)x4 (-5. 7. 6. 7.)x4 (6. -7. -8. -7.)x4 (-6. 5. 4. 5.)x2 -6~_______
+(-6. r)x8 (-6.)x16 (-6≡.)x16 4. 5. 6. 7. 8. 9. 10. -10o___ r_______
+((-5≡. r -5≡. -5≡. r -5≡. r -5≡.)x2 (5≡. r 5≡. 5≡. r 5≡. r 5≡.)x2 (-3≡. r -3≡. -3≡. r -3≡. r -3≡.)x2 (5≡_ 6≡. 7≡. 8≡___ r_______))x2
+(-3'' -3 -3'' -3)x8 (-2'' -2 -2'' -2)x4 (-1' -1 -1' -1)x4
+((-6. 7. -8. 9. -8. 7.)x2 (-5. 6. -7. 8. -7. 6.)x2)x2
+(7. -8. 8. -9. 9. -9. 8. -8.)x2 7≡~_______________`;
+const EDM_OPTS={bpm:128,base:.25,swing:false,drums:true};
+let duck=null, dnoise=null;
+function drum(kind){
+  if(!ac) return;
+  const t=ac.currentTime;
+  if(!dnoise){dnoise=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=dnoise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+  const out=ac.createGain();out.connect(ac.destination);
+  if(kind==="kick"){
+    const o=ac.createOscillator();o.type="sine";o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(42,t+.14);
+    out.gain.setValueAtTime(.9,t);out.gain.exponentialRampToValueAtTime(.001,t+.32);o.connect(out);o.start(t);o.stop(t+.35);
+    if(duck){duck.gain.cancelScheduledValues(t);duck.gain.setValueAtTime(.3,t);duck.gain.setTargetAtTime(1,t+.03,.07);}   // side-chain pump
+  }else{
+    const n=ac.createBufferSource();n.buffer=dnoise;const f=ac.createBiquadFilter();
+    if(kind==="hat"){f.type="highpass";f.frequency.value=7500;out.gain.setValueAtTime(.18,t);out.gain.exponentialRampToValueAtTime(.001,t+.05);}
+    else{f.type="bandpass";f.frequency.value=1700;f.Q.value=.8;out.gain.setValueAtTime(.45,t);out.gain.exponentialRampToValueAtTime(.001,t+.16);}
+    n.connect(f);f.connect(out);n.start(t);n.stop(t+.2);
+  }
+}
 function startDemo(song){
   stopDemo();initAudio();
   const notes=song.notes||(()=>{let t=0;const spb=60/song.bpm;return song.n.map(([m,b])=>{const o={t,d:b*spb*.92,m};t+=b*spb;return o;});})();
-  pb={name:song.name,notes:song.planned?notes:plan(notes,song.shift),i:0,t0:performance.now()/1000,cur:null};
+  pb={name:song.name,notes:song.planned?notes:plan(notes,song.shift),i:0,t0:performance.now()/1000,cur:null,
+      drum:song.drums?{spb:60/song.bpm,k:0,end:song.len}:null};
   pbActive=true;harp.classList.add("gliding");
   const missing=pb.notes.filter(n=>n.miss).length;
   document.getElementById("demoBtn").textContent="■ 정지";
@@ -952,6 +1076,8 @@ function startDemo(song){
     if(!pb) return;
     const now=(performance.now()/1000-pb.t0)*S.rate;
     if(pb.cur&&now>=pb.cur.t+pb.cur.d){applyAction(null);pb.cur=null;}
+    if(pb.drum){const dr=pb.drum;
+      while(dr.k*dr.spb/2<=now&&dr.k*dr.spb/2<dr.end){const k=dr.k++;drum(k%2===0?"kick":"hat");if(k%4===2)drum("clap");}}
     while(pb.i<pb.notes.length&&pb.notes[pb.i].t<=now){
       const n=pb.notes[pb.i++];
       if(n.a){applyAction(n.a);pb.cur=n;}
@@ -995,6 +1121,8 @@ dFile.onchange=async()=>{
 };
 function renderDemo(){
   const list=document.getElementById("dSongs");list.innerHTML="";
+  {const b=document.createElement("button");b.className="dsong edm";b.textContent="⚡ 네온 하모니카 (EDM 테크 데모 · 사람은 못 불어요)";
+   b.onclick=()=>{ddlg.close();startDemo(tabToSong(EDM_TAB,"네온 하모니카",EDM_OPTS));};list.appendChild(b);}
   SONGS.forEach(sg=>{const b=document.createElement("button");b.className="dsong";b.textContent=sg.name;b.onclick=()=>{ddlg.close();startDemo(sg);};list.appendChild(b);});
   const tb=document.getElementById("dTracks");
   if(dTracks&&dTracks.length>1){tb.innerHTML='<p class="dnote">멜로디 트랙을 골라 주세요</p>';
@@ -1028,12 +1156,13 @@ function tabParse(src){
   walk(root);
   return {notes:flat,errs};
 }
-function tabToSong(src,name){
+function tabToSong(src,name,o={}){
   const {notes}=tabParse(src);
-  const spb=60/S.tabBpm, base=S.tabBase;let t=0,pair=0;const out=[];
+  const bpm=o.bpm||S.tabBpm, base=o.base||S.tabBase, swing=o.swing!=null?o.swing:S.tabSwing;
+  const spb=60/bpm;let t=0,pair=0;const out=[];
   notes.forEach(n=>{
     let len=n.len*base;
-    if(S.tabSwing&&n.len===1){len=base*(pair%2===0?4/3:2/3);pair++;} else pair=0;
+    if(swing&&n.len===1){len=base*(pair%2===0?4/3:2/3);pair++;} else pair=0;
     const dur=len*spb;
     if(!n.rest&&n.ok!==false){
       const max=n.bend?maxFor(n.h,n.dir):0;
@@ -1041,7 +1170,7 @@ function tabToSong(src,name){
     }
     t+=dur;
   });
-  return {name,planned:true,notes:out};
+  return {name,planned:true,notes:out,bpm,len:t,drums:o.drums!=null?o.drums:S.tabDrums};
 }
 const tdlg=document.getElementById("tabDlg"), tIn=document.getElementById("tabIn");
 let tabPage=0;
@@ -1078,7 +1207,8 @@ function playTab(){ if(!tIn.value.trim())return; tdlg.close(); startDemo(tabToSo
 function renderTabOpts(){
   const mk=(id,opts,key)=>{const box=document.getElementById(id);box.innerHTML="";opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));b.onclick=()=>{S[key]=v;save();renderTabOpts();};box.appendChild(b);});};
   const bp=[[60,"60"],[80,"80"],[100,"100"],[120,"120"],[150,"150"]];if(!bp.some(x=>x[0]===S.tabBpm))bp.push([S.tabBpm,String(S.tabBpm)]);mk("tBpm",bp,"tabBpm");
-  mk("tBase",[[1,"한 박"],[.5,"반 박"]],"tabBase");
+  mk("tBase",[[1,"한 박"],[.5,"반 박"],[.25,"16분 (기계 속도)"]],"tabBase");
+  mk("tDrums",[[false,"없음"],[true,"EDM 비트"]],"tabDrums");
   mk("tSwing",[[false,"이븐"],[true,"스윙"]],"tabSwing");
   const list=document.getElementById("tabSaved");list.innerHTML="";
   getTabs().forEach((tb,i)=>{const row=document.createElement("div");row.className="trow";
@@ -1093,6 +1223,7 @@ document.getElementById("tabClose").onclick=()=>tdlg.close();
 tdlg.addEventListener("click",e=>{if(e.target===tdlg)tdlg.close();});
 tIn.addEventListener("input",()=>{tabPreview();save();});
 document.getElementById("tabSave").onclick=()=>{if(!tIn.value.trim())return;const l=getTabs();l.unshift({text:tIn.value});setTabs(l.slice(0,12));renderTabOpts();};
+document.getElementById("tabEdm").onclick=()=>{tIn.value=EDM_TAB;Object.assign(S,{tabBpm:EDM_OPTS.bpm,tabBase:EDM_OPTS.base,tabSwing:false,tabDrums:true});save();renderTabOpts();tabPreview();};
 document.getElementById("tabEx").onclick=()=>{tIn.value="5 5 -5 6 6 -5 5 -4 4 4 -4 5 5_ -4 -4_ / (4 5 -5 6_)x2 / -3'' -3''~__ 4≡_ 4≡.";tabPreview();save();};
 
 /* ---------- MuseScore → 숫자보 converter (MIDI or uncompressed MusicXML) ---------- */
