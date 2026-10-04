@@ -84,20 +84,23 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 
 <dialog id="dlg"><div class="sheet">
   <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+  <div class="grp"><h3>좌우 기울기 반전</h3><div class="seg" id="sInv"></div>
+    <p class="note2">켜면 오른쪽으로 기울였을 때와 왼쪽으로 기울였을 때 넘어가는 줄 방향이 서로 바뀌어요.</p></div>
   <div class="grp"><h3>쥐는 방식</h3><div class="seg" id="sLayout"></div>
     <p class="note2">나눠 쥐기는 폰을 왼손으로 바이올린 목처럼 들고 네 손가락으로 지판 쪽을 짚고, 오른손 검지로 활 쪽을 위아래로 문지르는 방식이에요.</p>
-    <div id="gSplit"><h3 style="margin-top:10px">지판 위치</h3><div class="seg" id="sSide"></div>
-    <h3 style="margin-top:10px">문지를 때 위아래 기울기로 세기 조절</h3><div class="seg" id="sRubTilt"></div></div></div>
+    <div id="gSplit"><h3 style="margin-top:10px">지판 위치</h3><div class="seg" id="sSide"></div></div></div>
   <div class="grp"><h3>활 (소리 내기)</h3><div class="seg" id="sBow"></div>
-    <p class="note2">자동은 화면을 짚고 있는 동안 소리가 나요(맨 위 띠는 개방현). 흔들기는 흔든 세기만큼, 기울이기는 기운 만큼 소리가 커져요.</p></div>
+    <p class="note2">문지르기는 나눠 쥐기에서 활 쪽을 위아래로 문질러요. 자동은 화면을 짚고 있는 동안 소리가 나요(맨 위 띠는 개방현). 흔들기는 흔든 세기만큼 소리가 커져요.</p></div>
   <div class="grp"><h3>흔들기 감도</h3><div class="seg" id="sShake"></div>
-    <h3 style="margin-top:10px">기울기 세기 감도 (기울여서 세게 모드)</h3><div class="seg" id="sTiltVol"></div>
-    <p class="note2">좌우·상하 흔들기는 폰 화면 기준 방향이에요. 기울여서 세게 모드는 짚고 있는 동안, 폰 위쪽을 기울인 만큼 소리가 커져요. 기준 버튼을 누르면 지금 자세가 0이 돼요.</p></div>
-  <div class="grp"><h3>손가락 자리 표시</h3><div class="seg" id="sSteps"></div>
+    <p class="note2">좌우·상하 흔들기는 폰 화면 기준 방향이에요.</p></div>
+  <div class="grp"><h3>줄 위 음 이름 (노트 라벨)</h3><div class="seg" id="sDots"></div>
+    <p class="note2">각 줄 위 음 자리에 작은 원을 띄우고 음 이름을 써 줘요. 음계(조)에 들어가는 음만 보여주고, 손가락 자리 표시를 "모든 반음"으로 하면 전부 보여요.</p>
+    <h3 style="margin-top:10px">초보자 손가락 스티커</h3><div class="seg" id="sTapes"></div>
+    <p class="note2">처음 배울 때 지판에 붙이는 테이프처럼, 1포지션 1·2·3·4번 손가락 자리에 색 띠를 붙여요.</p></div>
+  <div class="grp"><h3>손가락 간격 표시 (온음·반음)</h3><div class="seg" id="sSteps"></div>
     <h3 style="margin-top:10px">음계 (조)</h3><div class="seg" id="sKey"></div>
     <p class="note2">활 아래 줄에서 손가락을 놓을 자리를 가로선으로 보여주고, 옆에 다음 자리까지 <span style="color:#6cc7ff">온음</span>인지 <span style="color:#ff8a7a">반음</span>인지 표시해요.</p></div>
-  <div class="grp"><h3>기울기 감도 (줄 하나 옮기는 각도)</h3><div class="seg" id="sTilt"></div>
-    <h3 style="margin-top:10px">기울기 방향</h3><div class="seg" id="sInv"></div></div>
+  <div class="grp"><h3>기울기 감도 (줄 하나 옮기는 각도)</h3><div class="seg" id="sTilt"></div></div>
   <div class="grp"><h3>겹음 구역 (두 줄이 같이 나는 범위)</h3><div class="seg" id="sDbl"></div>
     <p class="note2">좁을수록 한 줄만 나는 범위가 넓어져요. 두 줄 사이 딱 가운데로 기울였을 때만 겹음이 나요.</p></div>
   <div class="grp"><h3>음 맞추기</h3><div class="seg" id="sSnap"></div></div>
@@ -111,14 +114,16 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 <script>
 const STR=[{n:"E",num:1,m:76},{n:"A",num:2,m:69},{n:"D",num:3,m:62},{n:"G",num:4,m:55}];
 const NAMES=["C","C♯","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
+const SOLS=["도","도♯","레","미♭","미","파","파♯","솔","라♭","라","시♭","시"];
 const MAJ=[0,2,4,5,7,9,11];
 const KEYS={C:0,G:7,D:2,A:9,F:5,"B♭":10};
 const scalePcs=()=>MAJ.map(i=>(KEYS[S.key]+i)%12);
-const DEF={layout:"full",fbSide:"right",rubTilt:"off",key:"G",steps:"scale",tiltVol:20,octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
+const DEF={noteDots:"off",tapes:false,layout:"full",fbSide:"right",key:"G",steps:"scale",octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
 let S={...DEF};
 try{const v=JSON.parse(localStorage.getItem("motion-violin")||"null");if(v)S={...DEF,...v};}catch(e){}
 const save=()=>{try{localStorage.setItem("motion-violin",JSON.stringify(S));}catch(e){}};
 if(!S.v2){S.bow="auto";S.octCol=true;S.v2=true;save();}
+if(["tiltUp","tiltDown","tiltBoth"].includes(S.bow)){S.bow=S.layout==="split"?"rub":"auto";save();}
 const nm=m=>{const r=Math.round(m);return NAMES[((r%12)+12)%12]+(Math.floor(r/12)-1);};
 let ac=null, voices=[], noiseBuf=null;
 let reverbGain=null, vibLfo=null;
@@ -228,23 +233,17 @@ function frame(){
   shakeX*=.96;shakeY*=.96;   // fades out if motion events pause
   let target=0;
   const shakeAmp=v=>Math.min(1,Math.max(0,(v-.35*S.shake)/(3.2*S.shake)));
-  // tilt modes: lean the top of the phone up (or down) to play louder while pressing
-  const lean=d=>Math.min(1,Math.max(0,d/S.tiltVol));
   if(manualBow) target=.75;
   else if(S.bow==="auto") target=fingers.size?.75:0;
+  else if(S.bow==="autoAll") target=.75;   // always bowing: no finger = open string
   else if(S.bow==="shake") target=shakeAmp(shakeX);
   else if(S.bow==="shakeY") target=shakeAmp(shakeY);
-  // beta grows when the top edge of the phone is lifted
-  else if(S.bow==="tiltUp") target=fingers.size?lean(pitchT):0;
-  else if(S.bow==="tiltDown") target=fingers.size?lean(-pitchT):0;
-  else if(S.bow==="tiltBoth") target=fingers.size?lean(Math.abs(pitchT)):0;
+
   else if(S.bow==="rub"){
     if(rub){const idle=now-rub.t;if(idle>40)rubV*=.7;}else rubV*=.6;
     let r=Math.min(1,Math.pow(rubV/800,.7));
     if(rub&&rub.change&&now-rub.change<60) r*=.35;   // bow change dip
-    // up/down tilt sets how hard the bow presses
-    const f=S.rubTilt==="up"?.35+.65*lean(pitchT):S.rubTilt==="down"?.35+.65*lean(-pitchT):S.rubTilt==="both"?.35+.65*lean(Math.abs(pitchT)):1;
-    target=r*f;
+    target=r;
   }
   amp+=(target-amp)*(target>amp?.3:.12);
   if(ac){const t=ac.currentTime;
@@ -283,7 +282,6 @@ function drawPad(){
   x.fillStyle=`rgba(255,215,140,${amp*.5})`;x.fillRect(cx-hw/2,0,hw,H);
   x.fillStyle="rgba(255,255,255,.85)";x.font="700 12px IBM Plex Sans KR, sans-serif";x.textAlign="center";
   x.fillText("활",cx,22);x.font="600 10px IBM Plex Sans KR, sans-serif";x.fillText("위아래로 문지르기",cx,38);
-  if(S.rubTilt!=="off"){x.fillText(`세기 ${Math.round((S.rubTilt==="up"?Math.max(0,pitchT):S.rubTilt==="down"?Math.max(0,-pitchT):Math.abs(pitchT)))}°`,cx,H-26);}
   if(rub){x.fillStyle=css("--hot");x.beginPath();x.arc(cx,rub.y-stage.getBoundingClientRect().top,14,0,Math.PI*2);x.fill();}
   x.textAlign="left";
 }
@@ -319,6 +317,21 @@ function draw(on){
       if(st){x.fillStyle=css("--ebony");x.font="800 9px Fraunces, serif";x.fillText(nm(pitchOf(i)).replace(/-?\d+$/,""),sx,y+3);}}
   });
   x.textAlign="left";
+  // beginner finger tapes (first position): 1st finger whole step, 2nd high, 3rd, 4th
+  if(S.tapes){const X0=fbX0(), FW=fbW(), T=[[2,"#e5533d","1"],[4,"#3d8be5","2"],[5,"#36b37e","3"],[7,"#e8b13a","4"]];
+    T.forEach(([k,c,n])=>{if(k>S.span)return;const y=yOfSemi(k);
+      x.fillStyle=c;x.globalAlpha=.85;x.fillRect(X0+8,y-3,FW-16,6);x.globalAlpha=1;
+      x.fillStyle=c;x.beginPath();x.arc(X0+12,y,9,0,Math.PI*2);x.fill();
+      x.fillStyle="#fff";x.font="800 10px Fraunces, serif";x.textAlign="center";x.fillText(n,X0+12,y+3.5);x.textAlign="left";});}
+  // note names in little circles on every string
+  if(S.noteDots!=="off"){const pcs=scalePcs();x.textAlign="center";
+    STR.forEach((s2,i)=>{const sx=strX(i);
+      for(let k=1;k<=S.span;k++){const m=s2.m+k;if(S.steps!=="all"&&!pcs.includes(m%12))continue;const y=yOfSemi(k);
+        x.fillStyle=S.octCol?octCol(m):"rgba(255,255,255,.85)";x.globalAlpha=on.includes(i)?1:.6;
+        x.beginPath();x.arc(sx,y,9,0,Math.PI*2);x.fill();x.globalAlpha=1;
+        x.fillStyle=css("--ebony");x.font="800 9px IBM Plex Sans KR, sans-serif";
+        x.fillText(S.noteDots==="sol"?SOLS[m%12]:NAMES[m%12],sx,y+3);}});
+    x.textAlign="left";}
   // whole / half step guide: where to place the next finger
   if(S.steps!=="off"&&on.length){
     const i=on[on.length-1], base=STR[i].m, pcs=scalePcs();
@@ -367,21 +380,24 @@ document.getElementById("gear").onclick=()=>{render();dlg.showModal();};
 document.getElementById("closeBtn").onclick=()=>dlg.close();
 dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
 function seg(id,opts,key){const box=document.getElementById(id);box.innerHTML="";
-  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));b.onclick=()=>{S[key]=v;save();render();};box.appendChild(b);});}
+  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));
+    b.onclick=()=>{S[key]=v;
+      // keep the grip and the bow style consistent, only when one of them is changed by hand
+      if(key==="layout"){if(v==="split")S.bow="rub";else if(S.bow==="rub")S.bow="auto";}
+      if(key==="bow"&&v==="rub")S.layout="split";
+      save();render();};box.appendChild(b);});}
 function render(){
-  if(S.bow==="rub"&&S.layout!=="split"){S.layout="split";save();}
   seg("sLayout",[["full","전체 화면 짚기"],["split","나눠 쥐기 (짚기 + 문지르기)"]],"layout");
   seg("sSide",[["right","지판 오른쪽 · 활 왼쪽"],["left","지판 왼쪽 · 활 오른쪽"]],"fbSide");
-  seg("sRubTilt",[["off","끄기"],["up","위로 기울이면 세게"],["down","아래로 기울이면 세게"],["both","양쪽 다"]],"rubTilt");
   document.getElementById("gSplit").hidden=S.layout!=="split";
-  if(S.layout!==S.lastLayout){if(S.layout==="split")S.bow="rub";else if(S.bow==="rub")S.bow="auto";S.lastLayout=S.layout;save();}
-  seg("sBow",[["rub","문지르기 (나눠 쥐기)"],["auto","자동 (짚는 동안)"],["shake","좌우로 흔들기"],["shakeY","상하로 흔들기"],["tiltUp","위로 기울이면 자동 활 (기울수록 세게)"],["tiltDown","아래로 기울이면 자동 활"],["tiltBoth","어느 쪽이든 기울이면 자동 활"]],"bow");
-  seg("sTiltVol",[[10,"조금만 기울여도"],[20,"보통"],[35,"많이 기울여야"]],"tiltVol");
+  seg("sBow",[["rub","문지르기 (나눠 쥐기)"],["auto","자동 (짚는 동안)"],["autoAll","자동 (늘 켜기 · 안 짚으면 개방현)"],["shake","좌우로 흔들기"],["shakeY","상하로 흔들기"]],"bow");
+  seg("sDots",[["off","끄기"],["letter","C D E"],["sol","도 레 미"]],"noteDots");
+  seg("sTapes",[[false,"끄기"],[true,"켜기"]],"tapes");
   seg("sSteps",[["off","끄기"],["scale","음계 간격 (온음·반음)"],["all","모든 반음"]],"steps");
   seg("sKey",Object.keys(KEYS).map(k=>[k,k+" 장조"]),"key");
   seg("sShake",[[.6,"예민하게"],[1,"보통"],[1.6,"세게 흔들어야"]],"shake");
   seg("sTilt",[[6,"6°"],[10,"10°"],[15,"15°"]],"tiltDeg");
-  seg("sInv",[[false,"기본"],[true,"반대로"]],"inv");
+  seg("sInv",[[false,"끄기 (기본)"],[true,"켜기 (반대로)"]],"inv");
   seg("sDbl",[[1.15,"아주 좁게"],[1.35,"좁게"],[1.6,"보통"]],"dblW");
   seg("sSnap",[["free","자유롭게"],["semi","반음에 맞추기"],["scale","음계에 맞추기"]],"snap");
   seg("sOctCol",[[false,"끄기"],[true,"켜기"]],"octCol");
