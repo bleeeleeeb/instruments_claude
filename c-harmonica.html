@@ -98,6 +98,31 @@ button:focus-visible{outline:2px solid var(--blow);outline-offset:2px}
 .legend b{display:block;font-family:var(--display);font-weight:600;font-size:1rem}
 .legend p{margin:3px 0 0;font-size:.86rem;color:var(--muted)}
 footer{margin-top:36px;font-size:.8rem;color:var(--muted)}
+.rlabel .short{display:none}
+/* phones: fit the whole map on screen without sideways scrolling */
+@media (max-width:600px){
+  main{padding:18px 10px 40px}
+  .scroller{margin:0 -10px;padding:6px 10px 10px}
+  .map{grid-template-columns:40px repeat(10,minmax(0,1fr));gap:3px;min-width:0}
+  .rlabel{font-size:.62rem;padding-right:3px}
+  .rlabel .long{display:none}.rlabel .short{display:inline}
+  .cell{height:38px;border-radius:7px;border-width:1.2px}
+  .cell.base{height:44px}
+  .cell .n{font-size:.82rem}
+  .cell.base .n{font-size:.95rem}
+  .cell .o{font-size:.55rem;margin-top:1px}
+  .plate{padding:6px 4px;gap:3px}
+  .slot{height:24px;font-size:.78rem}
+  .side{font-size:.65rem}
+  .kbwrap{margin:0 -10px;padding:4px 10px 8px}
+  .kb{min-width:0;height:118px}
+  .klbl{font-size:.5rem}
+  .dot{width:5px;height:5px}
+  .bk{height:72px}
+  .detail{grid-template-columns:auto 1fr;padding:14px}
+  .big{font-size:2.6rem}
+  .chip{font-size:.78rem;padding:5px 9px}
+}
 @media (prefers-reduced-motion:reduce){.cell{transition:none}}
 </style>
 </head>
@@ -152,16 +177,16 @@ const OD={7:85,8:89,9:92,10:97};
 const RARE=new Set(["ob-2","ob-3","od-8"]);
 
 const ROWS=[
-  {tech:"ob",  label:"오버블로", get:h=>OB[h]},
-  {tech:"bb",  label:"블로 벤드 온음", depth:2, get:h=>BBEND[h]?.[1]},
-  {tech:"bb",  label:"블로 벤드 반음", depth:1, get:h=>BBEND[h]?.[0]},
-  {tech:"blow",label:"블로", base:true, get:h=>BLOW[h-1]},
+  {tech:"ob",  label:"오버블로", short:"OB", get:h=>OB[h]},
+  {tech:"bb",  label:"블로 벤드 온음", short:"블로″", depth:2, get:h=>BBEND[h]?.[1]},
+  {tech:"bb",  label:"블로 벤드 반음", short:"블로′", depth:1, get:h=>BBEND[h]?.[0]},
+  {tech:"blow",label:"블로", short:"블로", base:true, get:h=>BLOW[h-1]},
   {plate:true},
-  {tech:"draw",label:"드로", base:true, get:h=>DRAW[h-1]},
-  {tech:"db",  label:"드로 벤드 반음", depth:1, get:h=>DBEND[h]?.[0]},
-  {tech:"db",  label:"드로 벤드 온음", depth:2, get:h=>DBEND[h]?.[1]},
-  {tech:"db",  label:"드로 벤드 1½음", depth:3, get:h=>DBEND[h]?.[2]},
-  {tech:"od",  label:"오버드로", get:h=>OD[h]},
+  {tech:"draw",label:"드로", short:"드로", base:true, get:h=>DRAW[h-1]},
+  {tech:"db",  label:"드로 벤드 반음", short:"드로′", depth:1, get:h=>DBEND[h]?.[0]},
+  {tech:"db",  label:"드로 벤드 온음", short:"드로″", depth:2, get:h=>DBEND[h]?.[1]},
+  {tech:"db",  label:"드로 벤드 1½음", short:"드로‴", depth:3, get:h=>DBEND[h]?.[2]},
+  {tech:"od",  label:"오버드로", short:"OD", get:h=>OD[h]},
 ];
 
 const state={names:"letter",acc:"flat",hidden:new Set(),sel:null};
@@ -220,7 +245,7 @@ function render(){
       for(let h=1;h<=10;h++){const s=document.createElement("div");s.className="slot";s.textContent=h;p.appendChild(s);}
       map.appendChild(p);return;
     }
-    const l=document.createElement("div");l.className="rlabel";l.textContent=r.label;map.appendChild(l);
+    const l=document.createElement("div");l.className="rlabel";l.innerHTML=`<span class="long">${r.label}</span><span class="short">${r.short||r.label}</span>`;map.appendChild(l);
     for(let h=1;h<=10;h++){
       const m=r.get(h);
       if(m==null){const e=document.createElement("div");e.className="empty";map.appendChild(e);continue;}
