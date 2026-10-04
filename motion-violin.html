@@ -54,6 +54,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button{flex:1 1 auto;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:11px;padding:8px 10px;font-size:.86rem;font-weight:500;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+#gSplit[hidden]{display:none}
 .note2{font-size:.78rem;color:var(--muted);margin:6px 0 0;line-height:1.45}
 </style>
 </head>
@@ -83,9 +84,18 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 
 <dialog id="dlg"><div class="sheet">
   <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+  <div class="grp"><h3>쥐는 방식</h3><div class="seg" id="sLayout"></div>
+    <p class="note2">나눠 쥐기는 폰을 왼손으로 바이올린 목처럼 들고 네 손가락으로 지판 쪽을 짚고, 오른손 검지로 활 쪽을 위아래로 문지르는 방식이에요.</p>
+    <div id="gSplit"><h3 style="margin-top:10px">지판 위치</h3><div class="seg" id="sSide"></div>
+    <h3 style="margin-top:10px">문지를 때 위아래 기울기로 세기 조절</h3><div class="seg" id="sRubTilt"></div></div></div>
   <div class="grp"><h3>활 (소리 내기)</h3><div class="seg" id="sBow"></div>
-    <p class="note2">자동은 화면을 짚고 있는 동안 활이 긋고 있는 것처럼 소리가 나요(맨 위 띠를 누르면 개방현). 흔들기는 폰을 앞뒤로 흔든 세기만큼 소리가 나요.</p></div>
-  <div class="grp"><h3>흔들기 감도</h3><div class="seg" id="sShake"></div></div>
+    <p class="note2">자동은 화면을 짚고 있는 동안 소리가 나요(맨 위 띠는 개방현). 흔들기는 흔든 세기만큼, 기울이기는 기운 만큼 소리가 커져요.</p></div>
+  <div class="grp"><h3>흔들기 감도</h3><div class="seg" id="sShake"></div>
+    <h3 style="margin-top:10px">기울기 세기 감도 (기울여서 세게 모드)</h3><div class="seg" id="sTiltVol"></div>
+    <p class="note2">좌우·상하 흔들기는 폰 화면 기준 방향이에요. 기울여서 세게 모드는 짚고 있는 동안, 폰 위쪽을 기울인 만큼 소리가 커져요. 기준 버튼을 누르면 지금 자세가 0이 돼요.</p></div>
+  <div class="grp"><h3>손가락 자리 표시</h3><div class="seg" id="sSteps"></div>
+    <h3 style="margin-top:10px">음계 (조)</h3><div class="seg" id="sKey"></div>
+    <p class="note2">활 아래 줄에서 손가락을 놓을 자리를 가로선으로 보여주고, 옆에 다음 자리까지 <span style="color:#6cc7ff">온음</span>인지 <span style="color:#ff8a7a">반음</span>인지 표시해요.</p></div>
   <div class="grp"><h3>기울기 감도 (줄 하나 옮기는 각도)</h3><div class="seg" id="sTilt"></div>
     <h3 style="margin-top:10px">기울기 방향</h3><div class="seg" id="sInv"></div></div>
   <div class="grp"><h3>겹음 구역 (두 줄이 같이 나는 범위)</h3><div class="seg" id="sDbl"></div>
@@ -101,8 +111,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 <script>
 const STR=[{n:"E",num:1,m:76},{n:"A",num:2,m:69},{n:"D",num:3,m:62},{n:"G",num:4,m:55}];
 const NAMES=["C","C♯","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
-const SCALES={G:[7,9,11,0,2,4,6]};
-const DEF={octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
+const MAJ=[0,2,4,5,7,9,11];
+const KEYS={C:0,G:7,D:2,A:9,F:5,"B♭":10};
+const scalePcs=()=>MAJ.map(i=>(KEYS[S.key]+i)%12);
+const DEF={layout:"full",fbSide:"right",rubTilt:"off",key:"G",steps:"scale",tiltVol:20,octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
 let S={...DEF};
 try{const v=JSON.parse(localStorage.getItem("motion-violin")||"null");if(v)S={...DEF,...v};}catch(e){}
 const save=()=>{try{localStorage.setItem("motion-violin",JSON.stringify(S));}catch(e){}};
@@ -152,56 +164,88 @@ function resize(){const d=window.devicePixelRatio||1;W=stage.clientWidth;H=stage
 addEventListener("resize",resize);
 const semisAt=y=>y<NUT?0:Math.max(0,(y-NUT)/(H-NUT-10)*S.span);
 const yOfSemi=s=>NUT+s/S.span*(H-NUT-10);
-const snap=(st,s)=>S.snap==="semi"?Math.round(s):S.snap==="scale"?(()=>{let b=Math.round(s),bd=99;for(let k=Math.max(0,Math.floor(s)-2);k<=Math.ceil(s)+2;k++){if(SCALES.G.includes((STR[st].m+k)%12)&&Math.abs(k-s)<bd){bd=Math.abs(k-s);b=k;}}return b;})():s;
+const snap=(st,s)=>S.snap==="semi"?Math.round(s):S.snap==="scale"?(()=>{let b=Math.round(s),bd=99;for(let k=Math.max(0,Math.floor(s)-2);k<=Math.ceil(s)+2;k++){if(scalePcs().includes((STR[st].m+k)%12)&&Math.abs(k-s)<bd){bd=Math.abs(k-s);b=k;}}return b;})():s;
 
 /* ---------- tilt: strings slide sideways; the ones inside the dotted middle third sound ---------- */
 let tilt=0, tilt0=null, rawTilt=0, sensorOK=false;
-const gap=()=>W/6;
+const split=()=>S.layout==="split";
+const fbX0=()=>split()?(S.fbSide==="right"?W/2:0):0;
+const fbW=()=>split()?W/2:W;
+const padX0=()=>S.fbSide==="right"?0:W/2;
+const fbC=()=>fbX0()+fbW()/2;
+const gap=()=>fbW()/6;
 // string order on screen from the left: G D A E (index 3..0); offset in "strings"
 const shift=()=>Math.max(-1.9,Math.min(1.9,tilt/S.tiltDeg))*(S.inv?-1:1);
-const strX=i=>W/2+((3-i)-1.5)*gap()-shift()*gap();
+const strX=i=>fbC()+((3-i)-1.5)*gap()-shift()*gap();
 // the bow zone is only a little wider than the string spacing:
 // usually one string fits inside, two only when the bow sits right between them
-const band=()=>{const w=gap()*S.dblW;return {a:W/2-w/2,b:W/2+w/2};};
+const band=()=>{const w=gap()*S.dblW, c=fbC();return {a:c-w/2,b:c+w/2};};
 function activeStrings(){const {a,b}=band();return [0,1,2,3].filter(i=>{const sx=strX(i);return sx>=a&&sx<=b;});}
 
 /* ---------- fingers: any touch stops the strings at its height ---------- */
 const fingers=new Map();
-stage.addEventListener("pointerdown",e=>{e.preventDefault();initAudio();stage.setPointerCapture(e.pointerId);setF(e);});
-stage.addEventListener("pointermove",e=>{if(fingers.has(e.pointerId))setF(e);});
-const up=e=>fingers.delete(e.pointerId);
+let rub=null, rubV=0, rubScroll=0;
+const inPad=px=>split()&&px>=padX0()&&px<padX0()+W/2;
+stage.addEventListener("pointerdown",e=>{e.preventDefault();initAudio();stage.setPointerCapture(e.pointerId);
+  const r=stage.getBoundingClientRect(), px=e.clientX-r.left;
+  if(inPad(px)&&!rub){rub={id:e.pointerId,y:e.clientY,t:performance.now()};return;}
+  setF(e);});
+stage.addEventListener("pointermove",e=>{
+  if(rub&&e.pointerId===rub.id){const now=performance.now(), dt=Math.max(4,now-rub.t), dy=e.clientY-rub.y;
+    rubV=rubV*.6+Math.abs(dy)/dt*1000*.4;rubScroll+=dy;if(Math.sign(dy)&&rub.dir&&Math.sign(dy)!==rub.dir)rub.change=now;if(dy)rub.dir=Math.sign(dy);
+    rub.y=e.clientY;rub.t=now;return;}
+  if(fingers.has(e.pointerId))setF(e);});
+const up=e=>{if(rub&&e.pointerId===rub.id){rub=null;return;}fingers.delete(e.pointerId);};
 stage.addEventListener("pointerup",up);stage.addEventListener("pointercancel",up);
 function setF(e){const r=stage.getBoundingClientRect();fingers.set(e.pointerId,{x:e.clientX-r.left,y:e.clientY-r.top});}
 const stopSemi=()=>{let best=0;fingers.forEach(f=>{const s=semisAt(f.y);if(s>best)best=s;});return best;};
 const pitchOf=i=>STR[i].m+snap(i,stopSemi());
 
 /* ---------- bowing by shaking the phone left-right (device x axis) ---------- */
-let shakeV=0, lastA=null, manualBow=false;
+let shakeX=0, shakeY=0, manualBow=false;
 function onMotion(e){
   const a=e.acceleration&&e.acceleration.x!=null?e.acceleration:null;
   if(!a) return;
   sensorOK=true;
-  const ax=a.x||0;
-  // leaky integration of acceleration -> bow speed, plus raw jerk for quick response
-  shakeV=shakeV*.86+Math.abs(ax)*.14;
+  const ax=a.x||0, ay=a.y||0;
+  shakeX=shakeX*.86+Math.abs(ax)*.14;
+  shakeY=shakeY*.86+Math.abs(ay)*.14;
 }
+let pitchT=0, pitch0=null, rawPitch=0;
 function onOrient(e){
   if(e.gamma==null) return;
+  if(e.beta!=null){rawPitch=e.beta;if(pitch0===null)pitch0=rawPitch;pitchT=pitchT+((rawPitch-pitch0)-pitchT)*.3;}
   sensorOK=true;rawTilt=e.gamma;
   if(tilt0===null) tilt0=rawTilt;
   tilt=tilt+((rawTilt-tilt0)-tilt)*.35;
 }
-document.getElementById("calBtn").onclick=()=>{tilt0=rawTilt;tilt=0;};
+document.getElementById("calBtn").onclick=()=>{tilt0=rawTilt;tilt=0;pitch0=rawPitch;pitchT=0;};
 
 /* ---------- loop ---------- */
 let amp=0;
 function frame(){
   const now=performance.now(), on=activeStrings();
-  shakeV*=.96;   // fades out if motion events pause
+  shakeX*=.96;shakeY*=.96;   // fades out if motion events pause
   let target=0;
+  const shakeAmp=v=>Math.min(1,Math.max(0,(v-.35*S.shake)/(3.2*S.shake)));
+  // tilt modes: lean the top of the phone up (or down) to play louder while pressing
+  const lean=d=>Math.min(1,Math.max(0,d/S.tiltVol));
   if(manualBow) target=.75;
   else if(S.bow==="auto") target=fingers.size?.75:0;
-  else target=Math.min(1,Math.max(0,(shakeV-.35*S.shake)/(3.2*S.shake)));
+  else if(S.bow==="shake") target=shakeAmp(shakeX);
+  else if(S.bow==="shakeY") target=shakeAmp(shakeY);
+  // beta grows when the top edge of the phone is lifted
+  else if(S.bow==="tiltUp") target=fingers.size?lean(pitchT):0;
+  else if(S.bow==="tiltDown") target=fingers.size?lean(-pitchT):0;
+  else if(S.bow==="tiltBoth") target=fingers.size?lean(Math.abs(pitchT)):0;
+  else if(S.bow==="rub"){
+    if(rub){const idle=now-rub.t;if(idle>40)rubV*=.7;}else rubV*=.6;
+    let r=Math.min(1,Math.pow(rubV/800,.7));
+    if(rub&&rub.change&&now-rub.change<60) r*=.35;   // bow change dip
+    // up/down tilt sets how hard the bow presses
+    const f=S.rubTilt==="up"?.35+.65*lean(pitchT):S.rubTilt==="down"?.35+.65*lean(-pitchT):S.rubTilt==="both"?.35+.65*lean(Math.abs(pitchT)):1;
+    target=r*f;
+  }
   amp+=(target-amp)*(target>amp?.3:.12);
   if(ac){const t=ac.currentTime;
     STR.forEach((s,i)=>{const v=voices[i], m=pitchOf(i), f=hz(m), a=on.includes(i)?amp*(on.length>1?.75:1):0;
@@ -225,17 +269,37 @@ function read(on){
   n.style.color=S.octCol?octCol(pitchOf(on[0])):"";
   sub.textContent=`${on.map(i=>STR[i].num+"번 "+STR[i].n).join(" · ")}${on.length>1?" (겹음)":""} · ${amp>.04?"소리 나는 중":(S.bow==="shake"?"폰을 앞뒤로 흔들면 소리가 나요":"화면을 짚으면 소리가 나요")}`;
 }
+/* bow pad for the split grip: rub up and down with the right index finger */
+function drawPad(){
+  const X=padX0(), w=W/2;
+  const g=x.createLinearGradient(X,0,X+w,0);g.addColorStop(0,"#c98a3c");g.addColorStop(1,"#8f5d24");
+  x.fillStyle=g;x.fillRect(X,0,w,H);
+  // bow hair that scrolls with the rubbing
+  const cx=X+w/2, hw=Math.min(46,w*.3);
+  x.fillStyle="rgba(243,238,226,.9)";x.fillRect(cx-hw/2,0,hw,H);
+  x.strokeStyle="rgba(160,140,110,.35)";x.lineWidth=1;
+  const off=((rubScroll%14)+14)%14;
+  for(let y=-14+off;y<H;y+=14){x.beginPath();x.moveTo(cx-hw/2,y);x.lineTo(cx+hw/2,y);x.stroke();}
+  x.fillStyle=`rgba(255,215,140,${amp*.5})`;x.fillRect(cx-hw/2,0,hw,H);
+  x.fillStyle="rgba(255,255,255,.85)";x.font="700 12px IBM Plex Sans KR, sans-serif";x.textAlign="center";
+  x.fillText("활",cx,22);x.font="600 10px IBM Plex Sans KR, sans-serif";x.fillText("위아래로 문지르기",cx,38);
+  if(S.rubTilt!=="off"){x.fillText(`세기 ${Math.round((S.rubTilt==="up"?Math.max(0,pitchT):S.rubTilt==="down"?Math.max(0,-pitchT):Math.abs(pitchT)))}°`,cx,H-26);}
+  if(rub){x.fillStyle=css("--hot");x.beginPath();x.arc(cx,rub.y-stage.getBoundingClientRect().top,14,0,Math.PI*2);x.fill();}
+  x.textAlign="left";
+}
 function draw(on){
   if(!W) return;
   x.clearRect(0,0,W,H);
-  x.fillStyle=css("--ebony");x.fillRect(0,0,W,H);
+  const X0=fbX0(), FW=fbW();
+  if(split()) drawPad();
+  x.fillStyle=css("--ebony");x.fillRect(X0,0,FW,H);
   // nut / open-string band
-  x.fillStyle=css("--tape");x.globalAlpha=.85;x.fillRect(0,0,W,NUT);x.globalAlpha=1;
-  x.fillStyle="#3a2a20";x.fillRect(0,NUT-4,W,4);
-  x.font="600 10px IBM Plex Sans KR, sans-serif";x.fillStyle=css("--muted");x.textAlign="center";x.fillText("개방현",W/2,14);
+  x.fillStyle=css("--tape");x.globalAlpha=.85;x.fillRect(X0,0,FW,NUT);x.globalAlpha=1;
+  x.fillStyle="#3a2a20";x.fillRect(X0,NUT-4,FW,4);
+  x.font="600 10px IBM Plex Sans KR, sans-serif";x.fillStyle=css("--muted");x.textAlign="center";x.fillText("개방현",X0+FW/2,14);
   // semitone guides
-  for(let s=1;s<=S.span;s++){const y=yOfSemi(s);x.strokeStyle="rgba(255,255,255,.07)";x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke();
-    if([2,4,5,7,12].includes(s)){x.fillStyle="rgba(244,239,228,.25)";x.fillRect(0,y-2,W,4);}}
+  for(let s=1;s<=S.span;s++){const y=yOfSemi(s);x.strokeStyle="rgba(255,255,255,.07)";x.beginPath();x.moveTo(X0,y);x.lineTo(X0+FW,y);x.stroke();
+    if([2,4,5,7,12].includes(s)){x.fillStyle="rgba(244,239,228,.25)";x.fillRect(X0,y-2,FW,4);}}
   // dotted middle third: under the bow
   const {a,b}=band();
   x.fillStyle=`rgba(255,215,140,${.06+amp*.18})`;x.fillRect(a,0,b-a,H);
@@ -255,6 +319,22 @@ function draw(on){
       if(st){x.fillStyle=css("--ebony");x.font="800 9px Fraunces, serif";x.fillText(nm(pitchOf(i)).replace(/-?\d+$/,""),sx,y+3);}}
   });
   x.textAlign="left";
+  // whole / half step guide: where to place the next finger
+  if(S.steps!=="off"&&on.length){
+    const i=on[on.length-1], base=STR[i].m, pcs=scalePcs();
+    const ks=[];for(let k=0;k<=S.span;k++){if(S.steps==="all"||pcs.includes((base+k)%12))ks.push(k);}
+    x.save();x.font="700 10px IBM Plex Sans KR, sans-serif";x.textAlign="right";
+    ks.forEach((k,j)=>{const y=k===0?NUT+2:yOfSemi(k), m=base+k;
+      x.strokeStyle=S.octCol?octCol(m):"rgba(255,255,255,.55)";x.lineWidth=2;x.beginPath();x.moveTo(a+6,y);x.lineTo(b-6,y);x.stroke();
+      x.fillStyle="rgba(255,255,255,.85)";x.fillText(NAMES[m%12],a-4,y+4);
+      if(j>0){const d=k-ks[j-1], ym=(y+(ks[j-1]===0?NUT+2:yOfSemi(ks[j-1])))/2;
+        const whole=d===2, txt=d===1?"반음":d===2?"온음":d+"반음";
+        x.save();x.textAlign="left";x.fillStyle=whole?"#6cc7ff":"#ff8a7a";x.font="800 10px IBM Plex Sans KR, sans-serif";
+        x.fillText(txt,b+4,ym+4);x.restore();
+        x.strokeStyle=whole?"rgba(108,199,255,.6)":"rgba(255,138,122,.7)";x.lineWidth=2;x.beginPath();x.moveTo(b+1,ym-(y-ym)+3);x.lineTo(b+1,y-3);x.stroke();}
+    });
+    x.restore();
+  }
   // finger marks + stop line
   fingers.forEach(f=>{x.fillStyle="rgba(255,255,255,.25)";x.beginPath();x.arc(f.x,f.y,18,0,Math.PI*2);x.fill();});
   if(fingers.size){const y=yOfSemi(st);x.save();x.shadowColor="#fff";x.shadowBlur=10;x.strokeStyle="rgba(255,255,255,.8)";x.lineWidth=2;x.beginPath();x.moveTo(a,y);x.lineTo(b,y);x.stroke();x.restore();}
@@ -289,12 +369,21 @@ dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close();});
 function seg(id,opts,key){const box=document.getElementById(id);box.innerHTML="";
   opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));b.onclick=()=>{S[key]=v;save();render();};box.appendChild(b);});}
 function render(){
-  seg("sBow",[["auto","자동 (짚는 동안 소리)"],["shake","흔들어서 긋기"]],"bow");
+  if(S.bow==="rub"&&S.layout!=="split"){S.layout="split";save();}
+  seg("sLayout",[["full","전체 화면 짚기"],["split","나눠 쥐기 (짚기 + 문지르기)"]],"layout");
+  seg("sSide",[["right","지판 오른쪽 · 활 왼쪽"],["left","지판 왼쪽 · 활 오른쪽"]],"fbSide");
+  seg("sRubTilt",[["off","끄기"],["up","위로 기울이면 세게"],["down","아래로 기울이면 세게"],["both","양쪽 다"]],"rubTilt");
+  document.getElementById("gSplit").hidden=S.layout!=="split";
+  if(S.layout!==S.lastLayout){if(S.layout==="split")S.bow="rub";else if(S.bow==="rub")S.bow="auto";S.lastLayout=S.layout;save();}
+  seg("sBow",[["rub","문지르기 (나눠 쥐기)"],["auto","자동 (짚는 동안)"],["shake","좌우로 흔들기"],["shakeY","상하로 흔들기"],["tiltUp","위로 기울이면 자동 활 (기울수록 세게)"],["tiltDown","아래로 기울이면 자동 활"],["tiltBoth","어느 쪽이든 기울이면 자동 활"]],"bow");
+  seg("sTiltVol",[[10,"조금만 기울여도"],[20,"보통"],[35,"많이 기울여야"]],"tiltVol");
+  seg("sSteps",[["off","끄기"],["scale","음계 간격 (온음·반음)"],["all","모든 반음"]],"steps");
+  seg("sKey",Object.keys(KEYS).map(k=>[k,k+" 장조"]),"key");
   seg("sShake",[[.6,"예민하게"],[1,"보통"],[1.6,"세게 흔들어야"]],"shake");
   seg("sTilt",[[6,"6°"],[10,"10°"],[15,"15°"]],"tiltDeg");
   seg("sInv",[[false,"기본"],[true,"반대로"]],"inv");
   seg("sDbl",[[1.15,"아주 좁게"],[1.35,"좁게"],[1.6,"보통"]],"dblW");
-  seg("sSnap",[["free","자유롭게"],["semi","반음에 맞추기"],["scale","G 장조 음계"]],"snap");
+  seg("sSnap",[["free","자유롭게"],["semi","반음에 맞추기"],["scale","음계에 맞추기"]],"snap");
   seg("sOctCol",[[false,"끄기"],[true,"켜기"]],"octCol");
   seg("sSpan",[[12,"한 옥타브"],[19,"한 옥타브 반"],[24,"두 옥타브"]],"span");
   seg("sTone",[["warm","따뜻하게"],["normal","보통"],["bright","맑고 밝게"]],"tone");
