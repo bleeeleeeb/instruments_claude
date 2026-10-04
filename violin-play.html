@@ -89,7 +89,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <div class="grp"><h3>활 긋는 방식</h3><div class="seg" id="sBowMode"></div>
       <p class="note2">활 모양대로는 보이는 활대를 따라 그으면 소리가 나고, 활대와 수직으로 비키면 줄이 바뀌어요. 4구역은 높이로 줄을 고르고 좌우로 그어요.</p>
       <h3 style="margin-top:10px">활 궤도 보이기</h3><div class="seg" id="sGuide"></div></div>
-    <div class="grp"><h3>활 영역 경계에서 겹음 (두 줄 동시)</h3><div class="seg" id="sDouble"></div></div>
+    <div class="grp"><h3>활 영역 경계에서 겹음 (두 줄 동시)</h3><div class="seg" id="sDouble"></div>
+      <p class="note2">가로선 짚기에서 겹음일 때 두 손가락으로 짚으면, 더 왼쪽 손가락이 왼쪽 줄을, 더 오른쪽 손가락이 오른쪽 줄을 짚어요.</p></div>
     <div class="grp"><h3>활 영역을 톡 치면</h3><div class="seg" id="sPizz"></div></div>
     <div class="grp"><h3>손 방향</h3><div class="seg" id="sHand"></div></div>
     <div class="grp"><h3>음색</h3><div class="seg" id="sTone"></div>
@@ -174,17 +175,22 @@ function snapSemi(st,s){
   return s;
 }
 const fingers=new Map(); // pointerId -> {st, s}
-function stopFor(st){let best=0,any=false;fingers.forEach(f=>{if(f.all||f.st===st){any=true;if(f.s>best)best=f.s;}});return any?best:0;}
+function stopFor(st){
+  // barre double stop with two fingers: the finger further left stops the left string, the other the right one
+  const bar=[...fingers.values()].filter(f=>f.all);
+  const zs=(bowP||S.autoBow)?zoneStrings():[];
+  if(bar.length>=2&&zs.length===2&&zs.includes(st)){
+    const byX=bar.slice().sort((p,q)=>p.x-q.x), cols=zs.slice().sort((p,q)=>colX(colOf(p))-colX(colOf(q)));
+    return (st===cols[0]?byX[0]:byX[byX.length-1]).s;
+  }
+  let best=0,any=false;fingers.forEach(f=>{if(f.all||f.st===st){any=true;if(f.s>best)best=f.s;}});return any?best:0;}
 function pitchOf(st){return STR[st].m+snapSemi(st,stopFor(st));}
 
 /* ---------- bow ---------- */
 let bowP=null, bowAmp=0, bowPos=1.5; // 0 = E (1st) … 3 = G (4th)
-function bowStrings(){
-  if(!bowP) return [];
-  const p=Math.max(0,Math.min(3,bowPos)), k=Math.round(p), off=p-k;
-  if(S.dbl&&Math.abs(off)>.3) return [Math.floor(p),Math.ceil(p)];
-  return [k];
-}
+function zoneStrings(){const p=Math.max(0,Math.min(3,bowPos)), k=Math.round(p), off=p-k;
+  return S.dbl&&Math.abs(off)>.3?[Math.floor(p),Math.ceil(p)]:[k];}
+function bowStrings(){ if(!bowP) return []; return zoneStrings(); }
 const posFromY=y=>3-Math.max(0,Math.min(3,(y/WH-.08)/.84*3));
 const posFromLane=y=>3-Math.max(0,Math.min(3,(y/WH-.08)/.84*4-.5));   // four equal lanes, top = G   // up = far G string, down = near E string
 
@@ -238,11 +244,10 @@ let autoPhase=0;
    strings your left hand presses (or the last bow string when using the barre line) */
 function activeStrings(){
   if(!S.autoBow||bowP) return bowStrings();
-  const st=new Set();let barre=false;
-  fingers.forEach(f=>{if(f.all)barre=true;else st.add(f.st);});
+  const st=new Set();let barre=0;
+  fingers.forEach(f=>{if(f.all)barre++;else st.add(f.st);});
   if(st.size) return [...st].sort();
-  if(barre){const p=Math.max(0,Math.min(3,bowPos)), k=Math.round(p), off=p-k;
-    return S.dbl&&Math.abs(off)>.3?[Math.floor(p),Math.ceil(p)]:[k];}
+  if(barre) return zoneStrings();
   return [];
 }
 function frame(){

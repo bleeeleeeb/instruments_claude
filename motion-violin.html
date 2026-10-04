@@ -32,6 +32,13 @@ button:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
 .ib svg{width:19px;height:19px}
 .stage{flex:1;min-height:0;position:relative;border-radius:16px;overflow:hidden;touch-action:none;background:var(--ebony)}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stk{display:none;gap:6px;align-items:center;flex-wrap:wrap}
+.stk.on{display:flex}
+.stklbl{font-size:.78rem;font-weight:700}
+.sw{display:flex;gap:5px}
+.sw button{width:30px;height:30px;border-radius:8px;border:2px solid transparent;cursor:pointer;padding:0}
+.sw button[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--surface) inset}
+#stkErase[aria-pressed="true"]{background:#d23b3b;color:#fff;border-color:#d23b3b}
 .fallback{display:none;gap:8px;align-items:center}
 .fallback.on{display:flex}
 .fallback input{flex:1;accent-color:var(--hot)}
@@ -67,6 +74,19 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <button class="ib" id="gear" aria-label="환경설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
   <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+  <div class="stk" id="octBar">
+    <span class="stklbl">중앙선 맞추기</span><span style="font-size:.74rem;color:var(--muted)">위아래로 밀어 옮겨요</span>
+    <button class="ib" id="octReset">기본값</button>
+    <button class="ib" id="octDone" style="background:var(--ink);color:var(--bg)">완료</button>
+  </div>
+  <div class="stk" id="stkBar">
+    <span class="stklbl">스티커</span>
+    <div class="sw" id="swatches"></div>
+    <button class="ib" id="stkPut">붙이기</button>
+    <button class="ib" id="stkErase">지우기</button>
+    <button class="ib" id="stkClear">모두 지우기</button>
+    <button class="ib" id="stkDone" style="background:var(--ink);color:var(--bg)">완료</button>
+  </div>
   <div class="fallback" id="fb">
     <span style="font-size:.75rem;color:var(--muted)">기울기</span><input type="range" id="tiltSl" min="-30" max="30" value="0" step=".5" aria-label="기울기 대신">
     <button class="bowbtn" id="bowBtn">활 ▶</button>
@@ -95,16 +115,18 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <p class="note2">좌우·상하 흔들기는 폰 화면 기준 방향이에요.</p></div>
   <div class="grp"><h3>줄 위 음 이름 (노트 라벨)</h3><div class="seg" id="sDots"></div>
     <p class="note2">각 줄 위 음 자리에 작은 원을 띄우고 음 이름을 써 줘요. 음계(조)에 들어가는 음만 보여주고, 손가락 자리 표시를 "모든 반음"으로 하면 전부 보여요.</p>
-    <h3 style="margin-top:10px">초보자 손가락 스티커</h3><div class="seg" id="sTapes"></div>
-    <p class="note2">처음 배울 때 지판에 붙이는 테이프처럼, 1포지션 1·2·3·4번 손가락 자리에 색 띠를 붙여요.</p></div>
+    <h3 style="margin-top:10px">초보자 스티커</h3><div class="seg" id="sTapes"></div>
+    <div class="seg" style="margin-top:6px"><button id="stkOpen">스티커 붙이러 가기</button><button id="stkPreset">기본 4개 (1·2·3·4번 손가락)</button></div>
+    <p class="note2">실제 지판에 붙이는 테이프처럼 원하는 자리에 원하는 색 띠를 붙여요. 붙이러 가기를 누르면 지판을 누른 채 움직여 자리를 고르고 붙이기로 확정해요.</p></div>
   <div class="grp"><h3>손가락 간격 표시 (온음·반음)</h3><div class="seg" id="sSteps"></div>
     <h3 style="margin-top:10px">음계 (조)</h3><div class="seg" id="sKey"></div>
     <p class="note2">활 아래 줄에서 손가락을 놓을 자리를 가로선으로 보여주고, 옆에 다음 자리까지 <span style="color:#6cc7ff">온음</span>인지 <span style="color:#ff8a7a">반음</span>인지 표시해요.</p></div>
   <div class="grp"><h3>기울기 감도 (줄 하나 옮기는 각도)</h3><div class="seg" id="sTilt"></div></div>
   <div class="grp"><h3>겹음 구역 (두 줄이 같이 나는 범위)</h3><div class="seg" id="sDbl"></div>
-    <p class="note2">좁을수록 한 줄만 나는 범위가 넓어져요. 두 줄 사이 딱 가운데로 기울였을 때만 겹음이 나요.</p></div>
+    <p class="note2">두 줄 사이로 기울이면 두 줄이 같이 울려요. 이때 두 손가락으로 짚으면 더 왼쪽 손가락이 왼쪽 줄, 더 오른쪽 손가락이 오른쪽 줄을 짚어서 서로 다른 음을 낼 수 있어요.</p></div>
   <div class="grp"><h3>음 맞추기</h3><div class="seg" id="sSnap"></div></div>
-  <div class="grp"><h3>지판 길이</h3><div class="seg" id="sSpan"></div>
+  <div class="grp"><h3>지판 길이 (음 간격)</h3><div class="seg" id="sSpan"></div>
+    <p class="note2">줄의 정중앙을 누르면 개방현보다 정확히 한 옥타브 높은 음이 나요. 이 자리를 화면 어디에 둘지 정하면 음 사이 간격이 정해져요.</p>
     <h3 style="margin-top:10px">옥타브 색 구별</h3><div class="seg" id="sOctCol"></div>
     <p class="note2"><span style="color:#4fc08e">■ 3옥타브</span> <span style="color:#6c97ff">■ 4</span> <span style="color:#a986ff">■ 5</span> <span style="color:#ff73ad">■ 6</span> <span style="color:#ff9d4a">■ 7</span></p></div>
   <div class="grp"><h3>음색</h3><div class="seg" id="sTone"></div><h3 style="margin-top:10px">울림</h3><div class="seg" id="sRoom"></div><h3 style="margin-top:10px">자동 비브라토</h3><div class="seg" id="sVib"></div></div>
@@ -118,10 +140,11 @@ const SOLS=["도","도♯","레","미♭","미","파","파♯","솔","라♭","�
 const MAJ=[0,2,4,5,7,9,11];
 const KEYS={C:0,G:7,D:2,A:9,F:5,"B♭":10};
 const scalePcs=()=>MAJ.map(i=>(KEYS[S.key]+i)%12);
-const DEF={noteDots:"off",tapes:false,layout:"full",fbSide:"right",key:"G",steps:"scale",octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
+const DEF={octFrac:1,noteDots:"off",tapes:false,stickers:[],layout:"full",fbSide:"right",key:"G",steps:"scale",octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
 let S={...DEF};
 try{const v=JSON.parse(localStorage.getItem("motion-violin")||"null");if(v)S={...DEF,...v};}catch(e){}
 const save=()=>{try{localStorage.setItem("motion-violin",JSON.stringify(S));}catch(e){}};
+if(S.span&&!S.octMig){S.octFrac=12/S.span;S.octMig=true;save();}
 if(!S.v2){S.bow="auto";S.octCol=true;S.v2=true;save();}
 if(["tiltUp","tiltDown","tiltBoth"].includes(S.bow)){S.bow=S.layout==="split"?"rub":"auto";save();}
 const nm=m=>{const r=Math.round(m);return NAMES[((r%12)+12)%12]+(Math.floor(r/12)-1);};
@@ -167,8 +190,11 @@ let W=0,H=0,NUT=50;
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 function resize(){const d=window.devicePixelRatio||1;W=stage.clientWidth;H=stage.clientHeight;cv.width=W*d;cv.height=H*d;x.setTransform(d,0,0,d,0,0);NUT=Math.max(44,Math.min(70,H*.09));}
 addEventListener("resize",resize);
-const semisAt=y=>y<NUT?0:Math.max(0,(y-NUT)/(H-NUT-10)*S.span);
-const yOfSemi=s=>NUT+s/S.span*(H-NUT-10);
+const octY=()=>NUT+S.octFrac*(H-NUT-10);          // the middle of the string = one octave up
+const pps=()=>Math.max(6,(octY()-NUT)/12);           // pixels per half step
+const SPAN=()=>Math.max(1,Math.floor((H-NUT-10)/pps()));
+const semisAt=y=>y<NUT?0:Math.max(0,(y-NUT)/pps());
+const yOfSemi=s=>NUT+s*pps();
 const snap=(st,s)=>S.snap==="semi"?Math.round(s):S.snap==="scale"?(()=>{let b=Math.round(s),bd=99;for(let k=Math.max(0,Math.floor(s)-2);k<=Math.ceil(s)+2;k++){if(scalePcs().includes((STR[st].m+k)%12)&&Math.abs(k-s)<bd){bd=Math.abs(k-s);b=k;}}return b;})():s;
 
 /* ---------- tilt: strings slide sideways; the ones inside the dotted middle third sound ---------- */
@@ -189,22 +215,63 @@ function activeStrings(){const {a,b}=band();return [0,1,2,3].filter(i=>{const sx
 
 /* ---------- fingers: any touch stops the strings at its height ---------- */
 const fingers=new Map();
-let rub=null, rubV=0, rubScroll=0;
+let rub=null, rubV=0, rubScroll=0, stkDrag=null;
 const inPad=px=>split()&&px>=padX0()&&px<padX0()+W/2;
 stage.addEventListener("pointerdown",e=>{e.preventDefault();initAudio();stage.setPointerCapture(e.pointerId);
   const r=stage.getBoundingClientRect(), px=e.clientX-r.left;
+  if(octEdit){octDrag={id:e.pointerId,y:e.clientY,f:S.octFrac};return;}
+  if(stkEdit&&!inPad(px)){stkDrag=e.pointerId;stkTouch(e.clientY-r.top);return;}
   if(inPad(px)&&!rub){rub={id:e.pointerId,y:e.clientY,t:performance.now()};return;}
   setF(e);});
 stage.addEventListener("pointermove",e=>{
   if(rub&&e.pointerId===rub.id){const now=performance.now(), dt=Math.max(4,now-rub.t), dy=e.clientY-rub.y;
     rubV=rubV*.6+Math.abs(dy)/dt*1000*.4;rubScroll+=dy;if(Math.sign(dy)&&rub.dir&&Math.sign(dy)!==rub.dir)rub.change=now;if(dy)rub.dir=Math.sign(dy);
     rub.y=e.clientY;rub.t=now;return;}
+  if(octDrag&&e.pointerId===octDrag.id){S.octFrac=Math.max(.2,Math.min(1.6,octDrag.f+(e.clientY-octDrag.y)/(H-NUT-10)));return;}
+  if(stkEdit&&e.pointerId===stkDrag){if(!stkErase){const r=stage.getBoundingClientRect();stkTouch(e.clientY-r.top);}return;}
   if(fingers.has(e.pointerId))setF(e);});
-const up=e=>{if(rub&&e.pointerId===rub.id){rub=null;return;}fingers.delete(e.pointerId);};
+const up=e=>{if(octDrag&&e.pointerId===octDrag.id){octDrag=null;save();return;}if(e.pointerId===stkDrag){stkDrag=null;return;}if(rub&&e.pointerId===rub.id){rub=null;return;}fingers.delete(e.pointerId);};
 stage.addEventListener("pointerup",up);stage.addEventListener("pointercancel",up);
 function setF(e){const r=stage.getBoundingClientRect();fingers.set(e.pointerId,{x:e.clientX-r.left,y:e.clientY-r.top});}
 const stopSemi=()=>{let best=0;fingers.forEach(f=>{const s=semisAt(f.y);if(s>best)best=s;});return best;};
-const pitchOf=i=>STR[i].m+snap(i,stopSemi());
+/* double stop with two fingers: the finger further left stops the left string, the one further right the right string */
+function stopOf(i){
+  const fs=[...fingers.values()];
+  if(!fs.length) return 0;
+  const on=activeStrings();
+  if(on.length===2&&fs.length>=2&&on.includes(i)){
+    const byX=fs.slice().sort((p,q)=>p.x-q.x), strs=on.slice().sort((p,q)=>strX(p)-strX(q));
+    return semisAt((i===strs[0]?byX[0]:byX[byX.length-1]).y);
+  }
+  return Math.max(...fs.map(f=>semisAt(f.y)));
+}
+const pitchOf=i=>STR[i].m+snap(i,stopOf(i));
+
+/* ---------- octave (string middle) line: swipe to set the note spacing ---------- */
+let octEdit=false, octDrag=null;
+const octBar=document.getElementById("octBar");
+function openOct(){octEdit=true;octBar.classList.add("on");document.getElementById("sub").textContent="회색 화면에서 위아래로 밀면 줄 정중앙(옥타브) 선이 움직여요.";}
+document.getElementById("octDone").onclick=()=>{octEdit=false;octBar.classList.remove("on");save();};
+document.getElementById("octReset").onclick=()=>{S.octFrac=1;save();};
+/* ---------- beginner stickers: place your own tapes on the fingerboard ---------- */
+const STK_COL=["#e5533d","#3d8be5","#36b37e","#e8b13a","#a46be0","#f2f2f2"];
+let stkEdit=false, stkCol=STK_COL[0], stkErase=false, stkPrev=null;
+const stkBar=document.getElementById("stkBar");
+function openStickers(){stkEdit=true;S.tapes=true;save();stkBar.classList.add("on");renderSw();document.getElementById("sub").textContent="지판을 누른 채 움직여 자리를 고르고, 붙이기를 눌러 확정해요.";}
+function renderSw(){const box=document.getElementById("swatches");box.innerHTML="";
+  STK_COL.forEach(c=>{const b=document.createElement("button");b.style.background=c;b.setAttribute("aria-label","색 고르기");b.setAttribute("aria-pressed",String(c===stkCol&&!stkErase));
+    b.onclick=()=>{stkCol=c;stkErase=false;document.getElementById("stkErase").setAttribute("aria-pressed","false");renderSw();};box.appendChild(b);});}
+document.getElementById("stkPut").onclick=()=>{if(stkPrev==null)return;
+  S.stickers=S.stickers.filter(t=>t.k!==stkPrev);S.stickers.push({k:stkPrev,c:stkCol});save();};
+document.getElementById("stkErase").onclick=e=>{stkErase=!stkErase;e.currentTarget.setAttribute("aria-pressed",String(stkErase));renderSw();};
+let stkClearArm=false;
+document.getElementById("stkClear").onclick=e=>{const b=e.currentTarget;
+  if(!stkClearArm){stkClearArm=true;b.textContent="한 번 더";setTimeout(()=>{stkClearArm=false;b.textContent="모두 지우기";},2200);return;}
+  S.stickers=[];save();stkClearArm=false;b.textContent="모두 지우기";};
+document.getElementById("stkDone").onclick=()=>{stkEdit=false;stkPrev=null;stkBar.classList.remove("on");};
+function stkTouch(y){const k=Math.round(semisAt(y));
+  if(stkErase){S.stickers=S.stickers.filter(t=>t.k!==k);save();stkPrev=null;return;}
+  stkPrev=k>0?k:null;}
 
 /* ---------- bowing by shaking the phone left-right (device x axis) ---------- */
 let shakeX=0, shakeY=0, manualBow=false;
@@ -236,6 +303,10 @@ function frame(){
   if(manualBow) target=.75;
   else if(S.bow==="auto") target=fingers.size?.75:0;
   else if(S.bow==="autoAll") target=.75;   // always bowing: no finger = open string
+  else if(S.bow==="leanUp"||S.bow==="leanDown"){   // lift (or drop) the top of the phone: the further, the harder the bow
+    const d=(S.bow==="leanUp"?pitchT:-pitchT)-4;
+    target=d>0?Math.min(1,d/26):0;
+  }
   else if(S.bow==="shake") target=shakeAmp(shakeX);
   else if(S.bow==="shakeY") target=shakeAmp(shakeY);
 
@@ -245,7 +316,8 @@ function frame(){
     if(rub&&rub.change&&now-rub.change<60) r*=.35;   // bow change dip
     target=r;
   }
-  amp+=(target-amp)*(target>amp?.3:.12);
+  const lean=S.bow==="leanUp"||S.bow==="leanDown";
+  amp+=(target-amp)*(target>amp?(lean?.06:.3):.12);   // lean modes swell up gradually
   if(ac){const t=ac.currentTime;
     STR.forEach((s,i)=>{const v=voices[i], m=pitchOf(i), f=hz(m), a=on.includes(i)?amp*(on.length>1?.75:1):0;
       v.o.forEach(o=>o.frequency.setTargetAtTime(f,t,.012));
@@ -296,7 +368,7 @@ function draw(on){
   x.fillStyle="#3a2a20";x.fillRect(X0,NUT-4,FW,4);
   x.font="600 10px IBM Plex Sans KR, sans-serif";x.fillStyle=css("--muted");x.textAlign="center";x.fillText("개방현",X0+FW/2,14);
   // semitone guides
-  for(let s=1;s<=S.span;s++){const y=yOfSemi(s);x.strokeStyle="rgba(255,255,255,.07)";x.beginPath();x.moveTo(X0,y);x.lineTo(X0+FW,y);x.stroke();
+  for(let s=1;s<=SPAN();s++){const y=yOfSemi(s);x.strokeStyle="rgba(255,255,255,.07)";x.beginPath();x.moveTo(X0,y);x.lineTo(X0+FW,y);x.stroke();
     if([2,4,5,7,12].includes(s)){x.fillStyle="rgba(244,239,228,.25)";x.fillRect(X0,y-2,FW,4);}}
   // dotted middle third: under the bow
   const {a,b}=band();
@@ -308,25 +380,30 @@ function draw(on){
   STR.forEach((s,i)=>{const sx=strX(i), act=on.includes(i);
     const wob=act?Math.sin(performance.now()/18+i)*amp*2:0;
     if(S.octCol){x.save();x.globalAlpha=act?.45:.25;x.lineWidth=10;
-      for(let k=0;k<=S.span;k++){const y0=k===0?NUT:yOfSemi(k-.5), y1=Math.min(H,yOfSemi(k+.5));x.strokeStyle=octCol(s.m+k);x.beginPath();x.moveTo(sx,y0);x.lineTo(sx,y1);x.stroke();}
+      for(let k=0;k<=SPAN();k++){const y0=k===0?NUT:yOfSemi(k-.5), y1=Math.min(H,yOfSemi(k+.5));x.strokeStyle=octCol(s.m+k);x.beginPath();x.moveTo(sx,y0);x.lineTo(sx,y1);x.stroke();}
       x.restore();}
     x.strokeStyle=act?css("--hot"):"rgba(232,220,196,.55)";x.lineWidth=1.5+i*.8;
     x.beginPath();x.moveTo(sx+wob,0);x.lineTo(sx-wob,H);x.stroke();
     x.font="800 14px Fraunces, serif";x.fillStyle=act?css("--hot"):css("--ink");x.fillText(s.n,sx,NUT*.62);
-    if(act){const y=yOfSemi(snap(i,st));x.fillStyle=S.octCol?octCol(pitchOf(i)):css("--hot");x.beginPath();x.arc(sx,st?y:NUT*.62+12,st?10:5,0,Math.PI*2);x.fill();
-      if(st){x.fillStyle=css("--ebony");x.font="800 9px Fraunces, serif";x.fillText(nm(pitchOf(i)).replace(/-?\d+$/,""),sx,y+3);}}
+    const si=stopOf(i);
+    if(act){const y=yOfSemi(snap(i,si));x.fillStyle=S.octCol?octCol(pitchOf(i)):css("--hot");x.beginPath();x.arc(sx,si?y:NUT*.62+12,si?10:5,0,Math.PI*2);x.fill();
+      if(si){x.fillStyle=css("--ebony");x.font="800 9px Fraunces, serif";x.fillText(nm(pitchOf(i)).replace(/-?\d+$/,""),sx,y+3);}}
   });
   x.textAlign="left";
   // beginner finger tapes (first position): 1st finger whole step, 2nd high, 3rd, 4th
-  if(S.tapes){const X0=fbX0(), FW=fbW(), T=[[2,"#e5533d","1"],[4,"#3d8be5","2"],[5,"#36b37e","3"],[7,"#e8b13a","4"]];
-    T.forEach(([k,c,n])=>{if(k>S.span)return;const y=yOfSemi(k);
-      x.fillStyle=c;x.globalAlpha=.85;x.fillRect(X0+8,y-3,FW-16,6);x.globalAlpha=1;
-      x.fillStyle=c;x.beginPath();x.arc(X0+12,y,9,0,Math.PI*2);x.fill();
-      x.fillStyle="#fff";x.font="800 10px Fraunces, serif";x.textAlign="center";x.fillText(n,X0+12,y+3.5);x.textAlign="left";});}
+  if(S.tapes||stkEdit){const X0=fbX0(), FW=fbW();
+    S.stickers.slice().sort((a,b)=>a.k-b.k).forEach((t,j)=>{if(t.k>SPAN())return;const y=yOfSemi(t.k);
+      x.fillStyle=t.c;x.globalAlpha=.88;x.fillRect(X0+8,y-3,FW-16,6);x.globalAlpha=1;});
+    if(stkEdit&&stkPrev!=null){const y=yOfSemi(stkPrev);
+      x.fillStyle="rgba(160,160,160,.35)";x.fillRect(X0,y-12,FW,24);                 // grey translucent guide
+      x.fillStyle=stkCol;x.fillRect(X0+8,y-3,FW-16,6);                               // sharp sticker line
+      x.fillStyle="#fff";x.font="700 11px IBM Plex Sans KR, sans-serif";x.fillText(`${stkPrev}반음 위 · 붙이기를 누르면 확정`,X0+10,y-16);}
+    if(stkEdit&&stkErase){x.fillStyle="rgba(210,59,59,.9)";x.font="700 11px IBM Plex Sans KR, sans-serif";x.fillText("지울 스티커를 누르세요",X0+10,NUT+16);}
+  }
   // note names in little circles on every string
   if(S.noteDots!=="off"){const pcs=scalePcs();x.textAlign="center";
     STR.forEach((s2,i)=>{const sx=strX(i);
-      for(let k=1;k<=S.span;k++){const m=s2.m+k;if(S.steps!=="all"&&!pcs.includes(m%12))continue;const y=yOfSemi(k);
+      for(let k=1;k<=SPAN();k++){const m=s2.m+k;if(S.steps!=="all"&&!pcs.includes(m%12))continue;const y=yOfSemi(k);
         x.fillStyle=S.octCol?octCol(m):"rgba(255,255,255,.85)";x.globalAlpha=on.includes(i)?1:.6;
         x.beginPath();x.arc(sx,y,9,0,Math.PI*2);x.fill();x.globalAlpha=1;
         x.fillStyle=css("--ebony");x.font="800 9px IBM Plex Sans KR, sans-serif";
@@ -335,7 +412,7 @@ function draw(on){
   // whole / half step guide: where to place the next finger
   if(S.steps!=="off"&&on.length){
     const i=on[on.length-1], base=STR[i].m, pcs=scalePcs();
-    const ks=[];for(let k=0;k<=S.span;k++){if(S.steps==="all"||pcs.includes((base+k)%12))ks.push(k);}
+    const ks=[];for(let k=0;k<=SPAN();k++){if(S.steps==="all"||pcs.includes((base+k)%12))ks.push(k);}
     x.save();x.font="700 10px IBM Plex Sans KR, sans-serif";x.textAlign="right";
     ks.forEach((k,j)=>{const y=k===0?NUT+2:yOfSemi(k), m=base+k;
       x.strokeStyle=S.octCol?octCol(m):"rgba(255,255,255,.55)";x.lineWidth=2;x.beginPath();x.moveTo(a+6,y);x.lineTo(b-6,y);x.stroke();
@@ -348,6 +425,17 @@ function draw(on){
     });
     x.restore();
   }
+  // the string's middle: one octave above the open string
+  {const yo=octY();if(yo<H){const X0=fbX0(),FW=fbW();
+    x.save();x.setLineDash([2,5]);x.strokeStyle="rgba(255,255,255,.55)";x.lineWidth=1.5;x.beginPath();x.moveTo(X0,yo);x.lineTo(X0+FW,yo);x.stroke();x.restore();
+    x.fillStyle="rgba(255,255,255,.6)";x.font="600 9px IBM Plex Sans KR, sans-serif";x.textAlign="right";x.fillText("줄 정중앙 · 옥타브",X0+FW-6,yo-4);x.textAlign="left";}}
+  if(octEdit){const X0=fbX0(),FW=fbW(),yo=Math.min(H-4,octY());
+    x.fillStyle="rgba(150,150,150,.45)";x.fillRect(X0,0,FW,H);
+    x.fillStyle="rgba(255,255,255,.95)";x.fillRect(X0,yo-2,FW,4);
+    x.font="800 13px IBM Plex Sans KR, sans-serif";x.textAlign="center";x.fillStyle="#fff";
+    x.fillText("줄 정중앙 (한 옥타브 위)",X0+FW/2,yo-12);x.font="600 11px IBM Plex Sans KR, sans-serif";
+    x.fillText(`반음 한 칸 ${pps().toFixed(0)}px · 화면에 ${SPAN()}반음`,X0+FW/2,yo+20);
+    x.fillText("▲ 위로 밀면 촘촘하게 · 아래로 밀면 넓게 ▼",X0+FW/2,NUT+20);x.textAlign="left";}
   // finger marks + stop line
   fingers.forEach(f=>{x.fillStyle="rgba(255,255,255,.25)";x.beginPath();x.arc(f.x,f.y,18,0,Math.PI*2);x.fill();});
   if(fingers.size){const y=yOfSemi(st);x.save();x.shadowColor="#fff";x.shadowBlur=10;x.strokeStyle="rgba(255,255,255,.8)";x.lineWidth=2;x.beginPath();x.moveTo(a,y);x.lineTo(b,y);x.stroke();x.restore();}
@@ -390,9 +478,11 @@ function render(){
   seg("sLayout",[["full","전체 화면 짚기"],["split","나눠 쥐기 (짚기 + 문지르기)"]],"layout");
   seg("sSide",[["right","지판 오른쪽 · 활 왼쪽"],["left","지판 왼쪽 · 활 오른쪽"]],"fbSide");
   document.getElementById("gSplit").hidden=S.layout!=="split";
-  seg("sBow",[["rub","문지르기 (나눠 쥐기)"],["auto","자동 (짚는 동안)"],["autoAll","자동 (늘 켜기 · 안 짚으면 개방현)"],["shake","좌우로 흔들기"],["shakeY","상하로 흔들기"]],"bow");
+  seg("sBow",[["rub","문지르기 (나눠 쥐기)"],["auto","자동 (짚는 동안)"],["autoAll","자동 (늘 켜기 · 안 짚으면 개방현)"],["leanUp","위로 기울일수록 점점 세게"],["leanDown","아래로 기울일수록 점점 세게"],["shake","좌우로 흔들기"],["shakeY","상하로 흔들기"]],"bow");
   seg("sDots",[["off","끄기"],["letter","C D E"],["sol","도 레 미"]],"noteDots");
-  seg("sTapes",[[false,"끄기"],[true,"켜기"]],"tapes");
+  seg("sTapes",[[false,"숨기기"],[true,"보이기"]],"tapes");
+  document.getElementById("stkOpen").onclick=()=>{dlg.close();openStickers();};
+  document.getElementById("stkPreset").onclick=()=>{S.stickers=[{k:2,c:STK_COL[0]},{k:4,c:STK_COL[1]},{k:5,c:STK_COL[2]},{k:7,c:STK_COL[3]}];S.tapes=true;save();render();};
   seg("sSteps",[["off","끄기"],["scale","음계 간격 (온음·반음)"],["all","모든 반음"]],"steps");
   seg("sKey",Object.keys(KEYS).map(k=>[k,k+" 장조"]),"key");
   seg("sShake",[[.6,"예민하게"],[1,"보통"],[1.6,"세게 흔들어야"]],"shake");
@@ -401,7 +491,10 @@ function render(){
   seg("sDbl",[[1.15,"아주 좁게"],[1.35,"좁게"],[1.6,"보통"]],"dblW");
   seg("sSnap",[["free","자유롭게"],["semi","반음에 맞추기"],["scale","음계에 맞추기"]],"snap");
   seg("sOctCol",[[false,"끄기"],[true,"켜기"]],"octCol");
-  seg("sSpan",[[12,"한 옥타브"],[19,"한 옥타브 반"],[24,"두 옥타브"]],"span");
+  {const box=document.getElementById("sSpan");box.innerHTML="";
+    [[1,"한 옥타브"],[12/19,"한 옥타브 반"],[.5,"두 옥타브"]].forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;
+      b.setAttribute("aria-pressed",String(Math.abs(S.octFrac-v)<.01));b.onclick=()=>{S.octFrac=v;save();render();};box.appendChild(b);});
+    const c=document.createElement("button");c.textContent="중앙선 직접 맞추기";c.onclick=()=>{dlg.close();openOct();};box.appendChild(c);}
   seg("sTone",[["warm","따뜻하게"],["normal","보통"],["bright","맑고 밝게"]],"tone");
   seg("sRoom",[[0,"없음"],[.22,"작은 홀"],[.45,"큰 홀"]],"room");
   seg("sVib",[[false,"끄기"],[true,"켜기"]],"vib");
