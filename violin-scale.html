@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script>
+/* iPhone/iPad sound fix: ignore the silent switch (iOS 17+) and unlock audio on the first tap */
+(function(){
+  try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  var AC=window.AudioContext||window.webkitAudioContext; if(!AC||AC.__wrapped) return;
+  var list=[];
+  function W(a){var c=a?new AC(a):new AC();list.push(c);return c;}
+  W.prototype=AC.prototype;W.__wrapped=true;
+  window.AudioContext=W;window.webkitAudioContext=W;
+  function unlock(){list.forEach(function(c){
+    try{ if(c.state!=="running") c.resume(); var b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}catch(e){} });}
+  ["touchstart","touchend","pointerdown","click","keydown"].forEach(function(ev){addEventListener(ev,unlock,{capture:true,passive:true});});
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)unlock();});
+})();
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>바이올린 음역 지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#efe7dc;--surface:#fbf7f1;--ink:#26180f;--muted:#7c6a58;--line:#dccfbd;--ebony:#1d1714;--string:#e8dcc4;--tape:#f4efe4;--hot:#e0a32e;
+  --o3:#2f9a6c;--o4:#3f74e0;--o5:#8a5ad6;--o6:#d1477f;--o7:#e07a1f;
+  --serif:"Fraunces",Georgia,serif;--body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15100c;--surface:#211a14;--ink:#f3eadf;--muted:#a9977f;--line:#3b3027;--ebony:#0c0a09;--string:#d9ccb1;--tape:#cfc6b6;--hot:#f2bc52;
+  --o3:#4fc08e;--o4:#6c97ff;--o5:#a986ff;--o6:#ff73ad;--o7:#ff9d4a}}
+:root[data-theme="dark"]{--bg:#15100c;--surface:#211a14;--ink:#f3eadf;--muted:#a9977f;--line:#3b3027;--ebony:#0c0a09;--string:#d9ccb1;--tape:#cfc6b6;--hot:#f2bc52;--o3:#4fc08e;--o4:#6c97ff;--o5:#a986ff;--o6:#ff73ad;--o7:#ff9d4a}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+main{max-width:760px;margin:0 auto;padding:24px 14px 50px}
+h1{font-family:var(--serif);font-weight:800;font-size:clamp(1.9rem,7vw,2.8rem);letter-spacing:-.02em;margin:0;line-height:1.05}
+h1 small{display:block;font-size:.42em;font-weight:600;color:var(--muted);margin-top:8px;letter-spacing:0}
+h2{font-family:var(--serif);font-weight:800;font-size:1.15rem;margin:26px 0 8px}
+.lede{color:var(--muted);font-size:.9rem;margin:10px 0 14px;max-width:60ch}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0 4px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.fact b{display:block;font-family:var(--serif);font-weight:800;font-size:1.25rem}
+.fact span{font-size:.74rem;color:var(--muted)}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.ctl .lb{font-size:.74rem;color:var(--muted);align-self:center;margin-right:2px;min-width:52px}
+.ctl button{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 11px;font-size:.8rem;font-weight:600;cursor:pointer}
+.ctl button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+/* fingerboard grid */
+.fb{background:var(--ebony);border-radius:18px;padding:0 6px 10px;margin-top:8px;overflow:hidden}
+.grid{display:grid;grid-template-columns:44px repeat(4,1fr);column-gap:6px}
+.hd{background:var(--tape);color:#3a2a20;text-align:center;font:800 1rem var(--serif);padding:8px 0 6px;border-bottom:4px solid #3a2a20}
+.hd small{display:block;font:600 .62rem var(--body);opacity:.75}
+.hd.l{background:transparent;border:0}
+.rl{display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font:600 .62rem var(--body);color:rgba(255,255,255,.5);position:relative}
+.rl.pos{color:var(--hot);font-weight:800}
+.cellw{position:relative;height:36px;display:flex;align-items:center;justify-content:center}
+.cellw::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:var(--sw);transform:translateX(-50%);background:var(--string);opacity:.55}
+.cellw.tape::after{content:"";position:absolute;left:4px;right:4px;top:50%;height:3px;transform:translateY(-50%);background:var(--tape);opacity:.35}
+.n{position:relative;z-index:1;width:34px;height:28px;border-radius:14px;border:0;cursor:pointer;font:800 .74rem var(--serif);color:#fff;background:var(--c);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:1px;opacity:.95}
+.n small{font:600 .5rem var(--body);opacity:.85}
+.n.dim{opacity:.22}
+.n.on{outline:3px solid var(--hot);outline-offset:1px}
+.n .fg{position:absolute;right:-8px;top:-6px;width:15px;height:15px;border-radius:50%;background:var(--hot);color:#2a1a10;font:800 .58rem var(--serif);display:flex;align-items:center;justify-content:center}
+.zone{background:rgba(224,163,46,.12)}
+.octmark{position:absolute;left:0;right:0;top:50%;border-top:2px dashed rgba(255,255,255,.55)}
+/* detail */
+.detail{position:sticky;bottom:8px;margin-top:12px;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:14px;box-shadow:0 10px 24px -14px rgba(0,0,0,.4)}
+.big{font-family:var(--serif);font-weight:800;font-size:2.4rem;line-height:1;min-width:3.2ch;color:var(--c,var(--ink))}
+.dtx{font-size:.84rem;line-height:1.45}
+.dtx span{color:var(--muted)}
+/* keyboard */
+.kbw{overflow-x:auto;margin:0 -14px;padding:2px 14px 6px}
+.kb{position:relative;height:110px;min-width:560px;display:flex}
+.wk{flex:1;border:1px solid var(--line);border-right:0;background:var(--surface);border-radius:0 0 6px 6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:4px;gap:2px;cursor:pointer;position:relative}
+.wk:last-child{border-right:1px solid var(--line)}
+.bk{position:absolute;top:0;height:64px;background:#2a2226;border-radius:0 0 5px 5px;z-index:2;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:4px;gap:2px;border:0}
+.d4{display:flex;flex-direction:column;gap:1px}
+.d4 i{width:6px;height:6px;border-radius:50%}
+.kl{font:700 .55rem var(--serif);color:var(--muted)}
+.wk.sel{background:color-mix(in srgb,var(--hot) 30%,var(--surface))}.bk.sel{background:color-mix(in srgb,var(--hot) 60%,#2a2226)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.74rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.tips{font-size:.84rem;color:var(--muted);line-height:1.6}
+.tips b{color:var(--ink)}
+footer{margin-top:24px;font-size:.74rem;color:var(--muted)}
+footer a{color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+  <h1>바이올린 음역 지도<small>네 줄 · 포지션 · 손가락 번호</small></h1>
+  <p class="lede">지판 위 음 자리를 줄마다 보여줘요. 음을 누르면 소리가 나고, 어느 줄 어느 손가락으로 짚는지 알려줘요. 포지션을 고르면 그 손 위치에서 닿는 범위와 손가락 번호가 표시돼요.</p>
+  <div class="facts">
+    <div class="fact"><b>G3</b><span>가장 낮은 음 (4번 G줄 개방현)</span></div>
+    <div class="fact"><b>B5</b><span>1포지션 최고음 (E줄 4번 손가락)</span></div>
+    <div class="fact"><b>E7 안팎</b><span>보통 쓰는 최고음 (E줄 높은 포지션)</span></div>
+    <div class="fact"><b>완전5도</b><span>줄 사이 간격: G–D–A–E</span></div>
+  </div>
+
+  <h2>지판</h2>
+  <div class="ctl"><span class="lb">포지션</span><span id="cPos"></span></div>
+  <div class="ctl"><span class="lb">음계 강조</span><span id="cKey"></span></div>
+  <div class="ctl"><span class="lb">음 이름</span><span id="cLab"></span></div>
+  <div class="fb"><div class="grid" id="grid"></div></div>
+  <div class="legend"><span><i style="background:var(--o3)"></i>3옥타브</span><span><i style="background:var(--o4)"></i>4옥타브</span><span><i style="background:var(--o5)"></i>5옥타브</span><span><i style="background:var(--o6)"></i>6옥타브</span><span><i style="background:var(--o7)"></i>7옥타브</span><span>점선 = 줄 정중앙(한 옥타브 위)</span></div>
+
+  <div class="detail" id="detail"><div class="big" id="dBig">–</div><div class="dtx" id="dTx">음을 누르면 여기에 정보가 나와요.</div></div>
+
+  <h2>반음 전체 · 어느 줄에서 낼 수 있나</h2>
+  <div class="kbw"><div class="kb" id="kb"></div></div>
+  <div class="legend"><span><i style="background:#2f9a6c"></i>G줄</span><span><i style="background:#3f74e0"></i>D줄</span><span><i style="background:#8a5ad6"></i>A줄</span><span><i style="background:#e07a1f"></i>E줄</span><span>건반을 누르면 그 음을 내는 모든 자리가 강조돼요.</span></div>
+
+  <h2>알아두면 좋은 점</h2>
+  <div class="tips">
+    <p><b>포지션</b>은 왼손이 지판 어디에 있는지를 말해요. 1포지션은 줄받침 가까이, 숫자가 클수록 아래(높은 음 쪽)로 내려가요. 한 포지션에서는 손을 옮기지 않고 한 줄당 개방현 + 손가락 네 개로 대략 반음 7~8개를 낼 수 있어요.</p>
+    <p><b>손가락 번호</b>는 검지 1, 중지 2, 약지 3, 새끼 4예요. 개방현은 0이에요. 같은 음을 여러 줄에서 낼 수 있어서(예: D줄 4번 손가락 = A줄 개방현) 곡 흐름에 맞는 쪽을 골라요.</p>
+    <p><b>줄 정중앙</b>(점선)을 짚으면 개방현보다 정확히 한 옥타브 높은 음이 나요. 손가락을 살짝만 대면 맑은 하모닉스 소리가 나는 자리이기도 해요.</p>
+    <p>여기 손가락 번호는 이해를 돕는 대략적인 기준이에요. 실제로는 조와 곡에 따라 같은 자리에서도 손가락을 바꿔 써요.</p>
+  </div>
+  <footer>연주는 <a href="violin-play.html">바이올린</a>, <a href="motion-violin.html">모션 바이올린</a>에서 해볼 수 있어요.</footer>
+</main>
+<script>
+const STR=[{n:"G",num:4,m:55,col:"#2f9a6c"},{n:"D",num:3,m:62,col:"#3f74e0"},{n:"A",num:2,m:69,col:"#8a5ad6"},{n:"E",num:1,m:76,col:"#e07a1f"}];
+const NAMES=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const SOL=["도","도♯","레","레♯","미","파","파♯","솔","솔♯","라","라♯","시"];
+const MAJ=[0,2,4,5,7,9,11];
+const KEYS={없음:null,"C 장조":0,"G 장조":7,"D 장조":2,"A 장조":9,"F 장조":5,"B♭ 장조":10};
+const SPAN=24;
+// first finger (in half steps above the open string) for each position — a rough, key-neutral guide
+const POS={0:null,1:2,2:4,3:5,4:7,5:9,6:10,7:12};
+const S={pos:1,key:"없음",lab:"letter"};
+const oct=m=>Math.floor(m/12)-1, octVar=m=>`var(--o${Math.max(3,Math.min(7,oct(m)))})`;
+const label=m=>S.lab==="sol"?SOL[m%12]:NAMES[m%12]+oct(m);
+function fingerFor(semi){
+  if(semi===0) return 0;
+  const f1=POS[S.pos];if(f1==null) return null;
+  const d=semi-f1;
+  if(d<-1||d>6) return null;
+  return d<=0?1:d<=2?2:d<=4?3:4;
+}
+function inZone(semi){const f1=POS[S.pos];if(f1==null)return false;return semi>=f1-1&&semi<=f1+5;}
+
+/* sound */
+let ac=null;
+function play(m){
+  if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();
+  const t=ac.currentTime,f=440*Math.pow(2,(m-69)/12);
+  const o=ac.createOscillator();o.type="sawtooth";o.frequency.value=f;
+  const v=ac.createOscillator();v.frequency.value=5.5;const vg=ac.createGain();vg.gain.setValueAtTime(0,t);vg.gain.linearRampToValueAtTime(10,t+.5);v.connect(vg);vg.connect(o.detune);
+  const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=Math.min(9000,f*6);
+  const pk=ac.createBiquadFilter();pk.type="peaking";pk.frequency.value=2800;pk.gain.value=6;
+  const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.16,t+.08);g.gain.setValueAtTime(.16,t+.7);g.gain.linearRampToValueAtTime(0,t+1);
+  o.connect(lp);lp.connect(pk);pk.connect(g);g.connect(ac.destination);o.start(t);v.start(t);o.stop(t+1.05);v.stop(t+1.05);
+}
+
+/* fingerboard grid */
+let selM=null;
+function build(){
+  const g=document.getElementById("grid");g.innerHTML='<div class="hd l"></div>'+STR.map(s=>`<div class="hd">${s.n}<small>${s.num}번 줄</small></div>`).join("");
+  const key=KEYS[S.key];
+  for(let k=0;k<=SPAN;k++){
+    const f1=POS[S.pos];
+    const isPosStart=f1!=null&&k===f1;
+    g.insertAdjacentHTML("beforeend",`<div class="rl ${isPosStart?"pos":""}">${k===0?"개방":isPosStart?S.pos+"포 ▸":k}${k===12?'<span class="octmark"></span>':""}</div>`);
+    STR.forEach((s,i)=>{
+      const m=s.m+k, inK=key==null||MAJ.includes((m-key+120)%12), z=inZone(k)||k===0;
+      const fg=z?fingerFor(k):null;
+      const cell=document.createElement("div");cell.className="cellw"+([2,4,5,7].includes(k)?" tape":"")+(S.pos&&z&&k>0?" zone":"");
+      cell.style.setProperty("--sw",(1.2+(3-i)*.7)+"px");
+      if(k===12) cell.insertAdjacentHTML("beforeend",'<span class="octmark"></span>');
+      const b=document.createElement("button");b.className="n"+(!inK?" dim":"")+(m===selM?" on":"");b.style.setProperty("--c",octVar(m));
+      b.innerHTML=`${S.lab==="sol"?SOL[m%12]:NAMES[m%12]}<small>${S.lab==="sol"?"":oct(m)}</small>`+(fg!=null&&S.pos?`<span class="fg">${fg}</span>`:"");
+      b.setAttribute("aria-label",`${s.n}줄 ${k===0?"개방현":k+"반음"}, ${label(m)}`);
+      b.onclick=()=>{selM=m;play(m);detail(m,i,k);build();markKb();};
+      cell.appendChild(b);g.appendChild(cell);
+    });
+  }
+}
+function detail(m,si,k){
+  const d=document.getElementById("detail");d.style.setProperty("--c",octVar(m));
+  document.getElementById("dBig").textContent=label(m);
+  const where=STR.map((s,i)=>({i,k:m-s.m})).filter(x=>x.k>=0&&x.k<=SPAN);
+  const fg=fingerFor(k);
+  document.getElementById("dTx").innerHTML=`${STR[si].num}번 ${STR[si].n}줄 · ${k===0?"개방현":k+"반음 위"}${S.pos&&fg!=null?` · ${S.pos}포지션 ${fg}번 손가락`:""}<br><span>${(440*Math.pow(2,(m-69)/12)).toFixed(1)} Hz · 같은 음: ${where.map(x=>`${STR[x.i].n}줄 ${x.k===0?"개방":x.k}`).join(", ")}</span>`;
+}
+
+/* keyboard coverage */
+function buildKb(){
+  const kb=document.getElementById("kb");kb.innerHTML="";const lo=55,hi=76+SPAN;
+  const isB=m=>[1,3,6,8,10].includes(m%12);const wh=[];for(let m=lo;m<=hi+1;m++)if(!isB(m))wh.push(m);
+  const w=100/wh.length;
+  const mk=(m,cls)=>{const k=document.createElement("button");k.className=cls;k.dataset.m=m;
+    const strs=STR.filter(s=>m>=s.m&&m<=s.m+SPAN);
+    k.innerHTML=`<span class="d4">${strs.map(s=>`<i style="background:${s.col}"></i>`).join("")}</span>`+(cls==="wk"&&m%12===0?`<span class="kl">C${oct(m)}</span>`:"");
+    k.setAttribute("aria-label",`${NAMES[m%12]}${oct(m)}, ${strs.map(s=>s.n).join(" ")}줄`);
+    k.onclick=()=>{selM=m;play(m);const s=STR.slice().reverse().find(s=>m>=s.m&&m<=s.m+SPAN)||STR[0];detail(m,STR.indexOf(s),m-s.m);build();markKb();};
+    return k;};
+  wh.forEach(m=>kb.appendChild(mk(m,"wk")));
+  for(let m=lo;m<=hi;m++)if(isB(m)){const i=wh.indexOf(m-1)+1;const k=mk(m,"bk");k.style.left=`calc(${i*w}% - ${w*.32}%)`;k.style.width=`${w*.64}%`;kb.appendChild(k);}
+}
+function markKb(){document.querySelectorAll("#kb [data-m]").forEach(k=>k.classList.toggle("sel",+k.dataset.m===selM));}
+
+/* controls */
+function seg(id,opts,key){const box=document.getElementById(id);box.innerHTML="";
+  opts.forEach(([v,lb])=>{const b=document.createElement("button");b.textContent=lb;b.setAttribute("aria-pressed",String(S[key]===v));b.onclick=()=>{S[key]=v;render();};box.appendChild(b);});}
+function render(){
+  seg("cPos",[[0,"끄기"],[1,"1"],[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"],[7,"7"]],"pos");
+  seg("cKey",Object.keys(KEYS).map(k=>[k,k]),"key");
+  seg("cLab",[["letter","C D E"],["sol","도 레 미"]],"lab");
+  build();
+}
+render();buildKb();
+</script>
+</body>
+</html>

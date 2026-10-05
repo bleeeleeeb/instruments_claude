@@ -8,52 +8,140 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#ece8e1;--surface:#faf8f4;--ink:#1d1914;--muted:#6d655b;--line:#d8d0c4;--a:#b0841f;
-  --display:"Bricolage Grotesque","IBM Plex Sans KR",system-ui,sans-serif;--body:"IBM Plex Sans KR",system-ui,-apple-system,sans-serif}
-@media (prefers-color-scheme:dark){:root{--bg:#15130f;--surface:#201c17;--ink:#f2ece3;--muted:#a69c8f;--line:#383128;--a:#e3b552}}
+:root{--bg:#ece6dc;--surface:#faf7f2;--ink:#1f1912;--muted:#6f655a;--line:#d9cfc1;--a:#b0841f;
+  --wind:#2f6fdb;--string:#c4473a;--perc:#2f7d5b;--tool:#7a4ccf;
+  --display:"Bricolage Grotesque","IBM Plex Sans KR",system-ui,sans-serif;--body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15120e;--surface:#211c16;--ink:#f2ebe1;--muted:#a69b8d;--line:#3a3128;--a:#e3b552;
+  --wind:#6b9bff;--string:#f07264;--perc:#4fc08e;--tool:#a986ff}}
+:root[data-theme="dark"]{--bg:#15120e;--surface:#211c16;--ink:#f2ebe1;--muted:#a69b8d;--line:#3a3128;--a:#e3b552;--wind:#6b9bff;--string:#f07264;--perc:#4fc08e;--tool:#a986ff}
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *,*::before,*::after{box-sizing:inherit}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
-main{max-width:760px;margin:0 auto;padding:28px 18px 48px}
-h1{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,8vw,3.2rem);letter-spacing:-.03em;margin:0 0 6px;line-height:1}
-.lede{color:var(--muted);margin:0 0 24px}
-h2{font-family:var(--display);font-weight:800;font-size:1.05rem;margin:26px 0 10px;color:var(--a)}
-.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-a.card{display:block;text-decoration:none;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px}
-a.card:hover{border-color:var(--a)}
-a.card b{display:block;font-family:var(--display);font-weight:800;font-size:1.1rem}
-a.card span{font-size:.82rem;color:var(--muted)}
-.tag{display:inline-block;font-size:.66rem;font-weight:600;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--a) 18%,transparent);color:var(--a);margin-left:6px;vertical-align:2px}
-footer{margin-top:30px;font-size:.78rem;color:var(--muted)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;overflow-x:hidden}
+button{font-family:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid var(--a);outline-offset:3px}
+main{max-width:820px;margin:0 auto;padding:26px 16px 50px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,9vw,3.4rem);letter-spacing:-.03em;margin:0;line-height:1;text-align:center}
+.lede{color:var(--muted);margin:8px auto 0;text-align:center;font-size:.92rem;max-width:34ch}
+.door{position:relative;height:250px;margin:18px 0 4px;perspective:900px;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+.door:active{cursor:grabbing}
+.ring{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
+.ring.anim{transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.tile{position:absolute;left:-74px;top:-92px;width:148px;height:184px;border-radius:26px;border:0;cursor:pointer;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 22%,var(--surface)),var(--surface));
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 45%,transparent),0 14px 30px -14px rgba(0,0,0,.35);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--ink);backface-visibility:hidden;transition:opacity .3s,filter .3s}
+.tile .ic{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.8rem;background:color-mix(in srgb,var(--c) 18%,var(--surface));box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c) 40%,transparent)}
+.tile b{font-family:var(--display);font-weight:800;font-size:1.2rem}
+.tile small{font-size:.72rem;color:var(--muted)}
+.tile.back{filter:saturate(.4) brightness(.92)}
+.nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px}
+.arrow{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-size:1.2rem;cursor:pointer}
+.dots{display:flex;gap:6px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line);transition:background .2s,transform .2s}
+.dots i.on{background:var(--ink);transform:scale(1.3)}
+.hint{text-align:center;font-size:.72rem;color:var(--muted);margin:0 0 6px}
+.panel{margin-top:10px;background:var(--surface);border-radius:22px;padding:18px 16px 14px;box-shadow:0 0 0 1.5px var(--line);border-top:5px solid var(--c)}
+.panel h2{font-family:var(--display);font-weight:800;font-size:1.35rem;margin:0 0 2px;color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.panel p.d{margin:0 0 12px;color:var(--muted);font-size:.85rem}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.inst{border:1.5px solid var(--line);border-radius:16px;padding:12px 12px 10px;background:var(--bg);display:flex;flex-direction:column;gap:8px}
+.inst .t{display:flex;align-items:center;gap:10px}
+.inst .em{font-size:1.6rem;width:42px;height:42px;flex:0 0 42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.inst b{font-family:var(--display);font-weight:800;font-size:1.02rem;display:block;line-height:1.2}
+.inst span.s{font-size:.75rem;color:var(--muted)}
+.tag{font-size:.62rem;font-weight:600;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--a) 18%,transparent);color:var(--a);margin-left:4px;vertical-align:2px}
+.acts{display:flex;gap:6px}
+.acts a{flex:1;text-align:center;text-decoration:none;border-radius:11px;padding:8px 6px;font-size:.84rem;font-weight:600}
+.acts a.play{background:var(--c);color:#fff}
+.acts a.scale{border:1.5px solid color-mix(in srgb,var(--c) 55%,transparent);color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.acts a.off{border:1.5px dashed var(--line);color:var(--muted);pointer-events:none}
+.empty{border:1.5px dashed var(--line);border-radius:16px;padding:18px;text-align:center;color:var(--muted);font-size:.88rem}
+footer{margin-top:26px;font-size:.76rem;color:var(--muted);text-align:center;line-height:1.6}
+@media (prefers-reduced-motion:reduce){.ring.anim,.tile,.dots i{transition:none}}
 </style>
 </head>
 <body>
 <main>
   <h1>가상악기</h1>
-  <p class="lede">악기와 음의 특성을 직접 만져 보며 익히는 폰용 연주·운지 페이지 모음</p>
-
-  <h2>연주</h2>
-  <div class="list">
-    <a class="card" href="harmonica-play.html"><b>다이아토닉 하모니카<span class="tag">센서</span></b><span>벤딩·자동 전환·숫자보·데모</span></a>
-    <a class="card" href="clarinet-play.html"><b>클라리넷</b><span>패드 연주·운지 그림·MIDI</span></a>
-    <a class="card" href="sax-play.html"><b>색소폰</b><span>알토 중심·알티시모·배음 운지</span></a>
-    <a class="card" href="chromatic-harmonica.html"><b>크로매틱 하모니카<span class="tag">센서</span></b><span>기울여서 ♯·자동 전환</span></a>
-    <a class="card" href="trumpet-play.html"><b>트럼펫<span class="tag">센서</span></b><span>밸브·배음·기울기</span></a>
-    <a class="card" href="flute-play.html"><b>플루트 · 피콜로</b><span>패드 연주·운지 그림</span></a>
-    <a class="card" href="violin-play.html"><b>바이올린</b><span>지판 짚기 + 활 문지르기</span></a>
-    <a class="card" href="motion-violin.html"><b>모션 바이올린<span class="tag">센서</span></b><span>한 손으로 흔들고 기울여 연주</span></a>
-    <a class="card" href="stradella.html"><b>스트라델라 베이스</b><span>아코디언 왼손 버튼판</span></a>
-    <a class="card" href="musicbox.html"><b>오르골 펀치</b><span>15음·30음 종이 오르골 도안 만들기</span></a>
-    <a class="card" href="theremin.html"><b>폰 테레민<span class="tag">카메라</span></b><span>손 높이로 연주</span></a>
+  <p class="lede">폰으로 만지면서 악기와 음을 익히는 웹 악기 모음</p>
+  <div class="door" id="door" aria-roledescription="회전문" aria-label="악기 분류">
+    <div class="ring anim" id="ring"></div>
   </div>
-
-  <h2>스케일 · 운지</h2>
-  <div class="list">
-    <a class="card" href="c-harmonica.html"><b>C 하모니카 음역 지도</b><span>블로·드로·벤딩·오버</span></a>
-    <a class="card" href="clarinet-fingering.html"><b>클라리넷 대체 운지 사전</b><span>E3~A7 운지 235개</span></a>
+  <div class="nav">
+    <button class="arrow" id="prev" aria-label="이전 분류">‹</button>
+    <div class="dots" id="dots"></div>
+    <button class="arrow" id="next" aria-label="다음 분류">›</button>
   </div>
-
-  <footer>센서·카메라는 https 주소에서 열어야 작동해요. 아이폰은 처음 시작할 때 권한을 허용해 주세요.</footer>
+  <p class="hint">좌우로 밀어서 돌리고, 가운데 문을 누르면 아래에 악기가 나와요.</p>
+  <section class="panel" id="panel" aria-live="polite"></section>
+  <footer>센서·카메라를 쓰는 악기는 https 주소에서 열어야 작동해요. 아이폰은 처음 시작할 때 권한을 허용해 주세요.<br>
+  운지 자료: The Woodwind Fingering Guide · 기본 데모 곡은 저작권이 끝난 곡만 넣었어요.</footer>
 </main>
+<script>
+const CATS=[
+  {id:"wind",name:"관악기",em:"🎷",c:"--wind",sub:"불어서 소리 내는 악기",desc:"숨으로 리드나 입술을 떨게 해서 소리를 내요. 하모니카와 아코디언도 리드가 떨려서 소리 나는 같은 집안이에요.",
+   items:[
+    {n:"다이아토닉 하모니카",em:"🎵",s:"벤딩·자동 전환·숫자보·데모",tag:"센서",play:"harmonica-play.html",scale:"c-harmonica.html",scaleLb:"음역 지도"},
+    {n:"크로매틱 하모니카",em:"🎶",s:"기울여서 ♯ · 자동 전환",tag:"센서",play:"chromatic-harmonica.html"},
+    {n:"클라리넷",em:"🎼",s:"패드 연주 · 운지 그림 · MIDI",play:"clarinet-play.html",scale:"clarinet-fingering.html",scaleLb:"운지 사전"},
+    {n:"색소폰",em:"🎷",s:"알토 중심 · 알티시모 · 배음",play:"sax-play.html"},
+    {n:"플루트 · 피콜로",em:"🪈",s:"패드 연주 · 운지 그림",play:"flute-play.html"},
+    {n:"트럼펫",em:"🎺",s:"밸브 · 배음 · 기울기",tag:"센서",play:"trumpet-play.html"},
+    {n:"아코디언 (스트라델라 베이스)",em:"🪗",s:"왼손 베이스·화음 버튼판",play:"stradella.html"},
+   ]},
+  {id:"string",name:"현악기",em:"🎻",c:"--string",sub:"줄을 긋거나 튕기는 악기",desc:"줄을 짚어 길이를 바꾸고, 활로 긋거나 손으로 튕겨 소리를 내요.",
+   items:[
+    {n:"바이올린",em:"🎻",s:"지판 짚기 + 활 긋기",play:"violin-play.html",scale:"violin-scale.html",scaleLb:"음역 지도"},
+    {n:"모션 바이올린",em:"📱",s:"한 손으로 기울이고 흔들어 연주",tag:"센서",play:"motion-violin.html",scale:"violin-scale.html",scaleLb:"음역 지도"},
+   ]},
+  {id:"perc",name:"타악기",em:"🥁",c:"--perc",sub:"두드려서 소리 내는 악기",desc:"아직 만든 악기가 없어요. 드럼 패드, 실로폰, 칼림바 같은 악기를 준비하고 있어요.",items:[]},
+  {id:"tool",name:"기타 도구",em:"🧰",c:"--tool",sub:"곡 만들기 · 특수 악기",desc:"연주를 돕는 도구와 조금 특별한 악기들이에요.",
+   items:[
+    {n:"간편 MIDI 만들기",em:"🎹",s:"건반으로 찍어서 .mid 만들기",play:"midi-maker.html",playLb:"열기"},
+    {n:"오르골 펀치",em:"🎁",s:"15음·30음 종이 오르골 도안",play:"musicbox.html",playLb:"열기"},
+    {n:"폰 테레민",em:"🪄",s:"손 높이로 연주하는 전자 악기",tag:"카메라",play:"theremin.html"},
+   ]},
+];
+const ring=document.getElementById("ring"), door=document.getElementById("door"), dots=document.getElementById("dots"), panel=document.getElementById("panel");
+const N=CATS.length, STEP=360/N;
+let idx=0, angle=0, R=200;
+let saved=0;try{saved=+(localStorage.getItem("index-cat")||0)||0;}catch(e){}
+function radius(){return Math.max(150,Math.min(240,door.clientWidth*.42));}
+CATS.forEach((c,i)=>{
+  const t=document.createElement("button");t.className="tile";t.style.setProperty("--c",`var(${c.c})`);
+  t.innerHTML=`<span class="ic">${c.em}</span><b>${c.name}</b><small>${c.sub}</small>`;
+  t.setAttribute("aria-label",`${c.name}, ${c.sub}`);
+  t.onclick=()=>{if(moved)return;if(i===idx){panel.scrollIntoView({behavior:"smooth",block:"start"});}else go(i);};
+  ring.appendChild(t);
+  dots.appendChild(document.createElement("i"));
+});
+function layout(){R=radius();[...ring.children].forEach((t,i)=>{t.style.transform=`rotateY(${i*STEP}deg) translateZ(${R}px)`;});apply();}
+function apply(){ring.style.transform=`translateZ(${-R}px) rotateY(${-angle}deg)`;
+  [...ring.children].forEach((t,i)=>{const rel=((i*STEP-angle)%360+540)%360-180;const front=Math.abs(rel)<STEP/2;
+    t.classList.toggle("back",!front);t.style.opacity=Math.abs(rel)>110?.35:1;t.tabIndex=front?0:-1;});
+  [...dots.children].forEach((d,i)=>d.classList.toggle("on",i===idx));}
+function go(i){
+  const target=i*STEP, diff=((target-angle)%360+540)%360-180;  // rotate the short way round
+  angle+=diff;idx=((i%N)+N)%N;
+  ring.classList.add("anim");apply();showPanel();try{localStorage.setItem("index-cat",idx);}catch(e){}
+}
+function showPanel(){
+  const c=CATS[idx];panel.style.setProperty("--c",`var(${c.c})`);
+  panel.innerHTML=`<h2>${c.em} ${c.name}</h2><p class="d">${c.desc}</p>`+
+    (c.items.length?`<div class="list">${c.items.map(it=>`
+      <div class="inst"><div class="t"><span class="em">${it.em}</span><div><b>${it.n}${it.tag?`<span class="tag">${it.tag}</span>`:""}</b><span class="s">${it.s}</span></div></div>
+        <div class="acts"><a class="play" href="${it.play}">${it.playLb||"연주하기"}</a>${it.scale?`<a class="scale" href="${it.scale}">${it.scaleLb||"스케일"}</a>`:(c.id==="tool"?"":`<a class="off">스케일 준비 중</a>`)}</div></div>`).join("")}</div>`
+      :`<div class="empty">곧 추가될 예정이에요 🥁</div>`);
+}
+let drag=null, moved=false;
+door.addEventListener("pointerdown",e=>{drag={x:e.clientX,a:angle};moved=false;ring.classList.remove("anim");});
+addEventListener("pointermove",e=>{if(!drag)return;const dx=e.clientX-drag.x;if(Math.abs(dx)>6)moved=true;angle=drag.a-dx*.45;apply();});
+addEventListener("pointerup",()=>{if(!drag)return;drag=null;go(Math.round(angle/STEP));setTimeout(()=>{moved=false;},0);});
+document.getElementById("prev").onclick=()=>go(idx-1);
+document.getElementById("next").onclick=()=>go(idx+1);
+addEventListener("keydown",e=>{if(e.key==="ArrowLeft")go(idx-1);if(e.key==="ArrowRight")go(idx+1);});
+addEventListener("resize",layout);
+layout();idx=((saved%N)+N)%N;angle=idx*STEP;ring.classList.remove("anim");apply();showPanel();
+</script>
 </body>
 </html>

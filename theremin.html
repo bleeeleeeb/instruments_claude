@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<script>
+/* iPhone/iPad sound fix: ignore the silent switch (iOS 17+) and unlock audio on the first tap */
+(function(){
+  try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  var AC=window.AudioContext||window.webkitAudioContext; if(!AC||AC.__wrapped) return;
+  var list=[];
+  function W(a){var c=a?new AC(a):new AC();list.push(c);return c;}
+  W.prototype=AC.prototype;W.__wrapped=true;
+  window.AudioContext=W;window.webkitAudioContext=W;
+  function unlock(){list.forEach(function(c){
+    try{ if(c.state!=="running") c.resume(); var b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}catch(e){} });}
+  ["touchstart","touchend","pointerdown","click","keydown"].forEach(function(ev){addEventListener(ev,unlock,{capture:true,passive:true});});
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)unlock();});
+})();
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>폰 테레민</title>
