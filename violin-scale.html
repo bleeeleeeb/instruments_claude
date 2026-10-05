@@ -91,14 +91,11 @@ footer a{color:var(--ink)}
 </head>
 <body>
 <main>
-  <h1>바이올린 음역 지도<small>네 줄 · 포지션 · 손가락 번호</small></h1>
+  <h1 id="ttl">바이올린 음역 지도<small>네 줄 · 포지션 · 손가락 번호</small></h1>
+  <div class="ctl" style="margin-top:12px"><span class="lb">악기</span><span id="cInst"></span></div>
   <p class="lede">지판 위 음 자리를 줄마다 보여줘요. 음을 누르면 소리가 나고, 어느 줄 어느 손가락으로 짚는지 알려줘요. 포지션을 고르면 그 손 위치에서 닿는 범위와 손가락 번호가 표시돼요.</p>
-  <div class="facts">
-    <div class="fact"><b>G3</b><span>가장 낮은 음 (4번 G줄 개방현)</span></div>
-    <div class="fact"><b>B5</b><span>1포지션 최고음 (E줄 4번 손가락)</span></div>
-    <div class="fact"><b>E7 안팎</b><span>보통 쓰는 최고음 (E줄 높은 포지션)</span></div>
-    <div class="fact"><b>완전5도</b><span>줄 사이 간격: G–D–A–E</span></div>
-  </div>
+  <div class="facts" id="facts"></div>
+  <p class="lede" id="clefNote" style="margin-top:8px"></p>
 
   <h2>지판</h2>
   <div class="ctl"><span class="lb">포지션</span><span id="cPos"></span></div>
@@ -111,7 +108,7 @@ footer a{color:var(--ink)}
 
   <h2>반음 전체 · 어느 줄에서 낼 수 있나</h2>
   <div class="kbw"><div class="kb" id="kb"></div></div>
-  <div class="legend"><span><i style="background:#2f9a6c"></i>G줄</span><span><i style="background:#3f74e0"></i>D줄</span><span><i style="background:#8a5ad6"></i>A줄</span><span><i style="background:#e07a1f"></i>E줄</span><span>건반을 누르면 그 음을 내는 모든 자리가 강조돼요.</span></div>
+  <div class="legend" id="strLegend"><span>건반을 누르면 그 음을 내는 모든 자리가 강조돼요.</span></div>
 
   <h2>알아두면 좋은 점</h2>
   <div class="tips">
@@ -124,6 +121,25 @@ footer a{color:var(--ink)}
 </main>
 <script>
 const STR=[{n:"G",num:4,m:55,col:"#2f9a6c"},{n:"D",num:3,m:62,col:"#3f74e0"},{n:"A",num:2,m:69,col:"#8a5ad6"},{n:"E",num:1,m:76,col:"#e07a1f"}];
+const INSTS={
+  violin:{name:"바이올린",strs:[["G",55],["D",62],["A",69],["E",76]],play:"violin-play.html",
+    facts:[["G3","가장 낮은 음 (4번 G줄 개방현)"],["B5","1포지션 최고음 (E줄 4번 손가락)"],["E7 안팎","보통 쓰는 최고음 (E줄 높은 포지션)"],["완전5도","줄 사이 간격: G–D–A–E"]],
+    clef:"바이올린 악보는 높은음자리표(G 음자리표)로 써요."},
+  viola:{name:"비올라",strs:[["C",48],["G",55],["D",62],["A",69]],play:"violin-play.html?inst=viola",
+    facts:[["C3","가장 낮은 음 (4번 C줄 개방현)"],["E5","1포지션 최고음 (A줄 4번 손가락)"],["A6 안팎","보통 쓰는 최고음 (A줄 높은 포지션)"],["완전5도","줄 사이 간격: C–G–D–A"]],
+    clef:"비올라 악보는 주로 가온음자리표(알토 클레프)로 써요. 가운데 줄이 가운데 도(C4)예요. 아주 높은 음은 높은음자리표로 바꿔 쓰기도 해요."},
+};
+let INST=new URLSearchParams(location.search).get("inst")==="viola"?"viola":"violin";
+function applyInst(){const I=INSTS[INST];I.strs.forEach(([n,m],i)=>{STR[i].n=n;STR[i].m=m;});
+  document.title=I.name+" 음역 지도";
+  document.getElementById("ttl").innerHTML=`${I.name} 음역 지도<small>네 줄 · 포지션 · 손가락 번호</small>`;
+  document.getElementById("facts").innerHTML=I.facts.map(([b,t])=>`<div class="fact"><b>${b}</b><span>${t}</span></div>`).join("");
+  document.getElementById("clefNote").textContent=I.clef;
+  const fa=document.querySelectorAll("footer a");fa[0].setAttribute("href",I.play);fa[0].textContent=I.name;fa[1].setAttribute("href","motion-violin.html"+(INST==="viola"?"?inst=viola":""));fa[1].textContent="모션 "+I.name;
+  const box=document.getElementById("cInst");box.innerHTML="";
+  Object.entries(INSTS).forEach(([k,v])=>{const b=document.createElement("button");b.textContent=v.name;b.setAttribute("aria-pressed",String(k===INST));
+    b.onclick=()=>{INST=k;history.replaceState(null,"",k==="viola"?"?inst=viola":location.pathname);selM=null;applyInst();render();buildKb();};box.appendChild(b);});
+}
 const NAMES=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
 const SOL=["도","도♯","레","레♯","미","파","파♯","솔","솔♯","라","라♯","시"];
 const MAJ=[0,2,4,5,7,9,11];
@@ -189,7 +205,8 @@ function detail(m,si,k){
 
 /* keyboard coverage */
 function buildKb(){
-  const kb=document.getElementById("kb");kb.innerHTML="";const lo=55,hi=76+SPAN;
+  document.getElementById("strLegend").innerHTML=STR.map(s=>`<span><i style="background:${s.col}"></i>${s.n}줄</span>`).join("")+"<span>건반을 누르면 그 음을 내는 모든 자리가 강조돼요.</span>";
+  const kb=document.getElementById("kb");kb.innerHTML="";const lo=STR[0].m,hi=STR[3].m+SPAN;
   const isB=m=>[1,3,6,8,10].includes(m%12);const wh=[];for(let m=lo;m<=hi+1;m++)if(!isB(m))wh.push(m);
   const w=100/wh.length;
   const mk=(m,cls)=>{const k=document.createElement("button");k.className=cls;k.dataset.m=m;
@@ -212,7 +229,7 @@ function render(){
   seg("cLab",[["letter","C D E"],["sol","도 레 미"]],"lab");
   build();
 }
-render();buildKb();
+applyInst();render();buildKb();
 </script>
 </body>
 </html>

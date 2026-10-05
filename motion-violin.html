@@ -120,6 +120,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 
 <dialog id="dlg"><div class="sheet">
   <header><h2>환경설정</h2><button class="close" id="closeBtn">닫기</button></header>
+  <div class="grp"><h3>악기</h3><div class="seg" id="sInst"></div>
+    <p class="note2">비올라는 줄이 C·G·D·A로 바이올린보다 완전5도 낮고, 소리가 더 굵어요.</p></div>
   <div class="grp"><h3>좌우 기울기 반전</h3><div class="seg" id="sInv"></div>
     <p class="note2">켜면 오른쪽으로 기울였을 때와 왼쪽으로 기울였을 때 넘어가는 줄 방향이 서로 바뀌어요.</p></div>
   <div class="grp"><h3>쥐는 방식</h3><div class="seg" id="sLayout"></div>
@@ -156,10 +158,18 @@ const SOLS=["도","도♯","레","미♭","미","파","파♯","솔","라♭","�
 const MAJ=[0,2,4,5,7,9,11];
 const KEYS={C:0,G:7,D:2,A:9,F:5,"B♭":10};
 const scalePcs=()=>MAJ.map(i=>(KEYS[S.key]+i)%12);
-const DEF={octFrac:1,noteDots:"off",tapes:false,stickers:[],layout:"full",fbSide:"right",key:"G",steps:"scale",octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
+const DEF={inst:"violin",octFrac:1,noteDots:"off",tapes:false,stickers:[],layout:"full",fbSide:"right",key:"G",steps:"scale",octCol:true,dblW:1.35,bow:"auto",shake:1,tiltDeg:10,inv:false,snap:"semi",span:12,tone:"normal",room:.22,vib:true,vibDepth:12,a4:440};
 let S={...DEF};
 try{const v=JSON.parse(localStorage.getItem("motion-violin")||"null");if(v)S={...DEF,...v};}catch(e){}
 const save=()=>{try{localStorage.setItem("motion-violin",JSON.stringify(S));}catch(e){}};
+
+/* instrument: violin (E A D G) or viola (A D G C) — same technique, a fifth lower */
+const INSTS={violin:{name:"바이올린",strs:[["E",76],["A",69],["D",62],["G",55]],tone:1},
+             viola:{name:"비올라",strs:[["A",69],["D",62],["G",55],["C",48]],tone:.72}};
+function applyInst(){const I=INSTS[S.inst]||INSTS.violin;I.strs.forEach(([n,m],i)=>{STR[i].n=n;STR[i].m=m;STR[i].num=i+1;});
+  document.title=document.title.replace(/바이올린|비올라/,I.name);}
+{const q=new URLSearchParams(location.search).get("inst");if(q&&INSTS[q]){S.inst=q;try{save();}catch(e){}}}
+applyInst();
 if(S.span&&!S.octMig){S.octFrac=12/S.span;S.octMig=true;save();}
 if(!S.v2){S.bow="auto";S.octCol=true;S.v2=true;save();}
 if(["tiltUp","tiltDown","tiltBoth"].includes(S.bow)){S.bow=S.layout==="split"?"rub":"auto";save();}
@@ -338,7 +348,7 @@ function frame(){
     STR.forEach((s,i)=>{const v=voices[i], m=pitchOf(i), f=hz(m), a=on.includes(i)?amp*(on.length>1?.75:1):0;
       v.o.forEach(o=>o.frequency.setTargetAtTime(f,t,.012));
       v.out.gain.setTargetAtTime(a*.32,t,.03);
-      const bright=S.tone==="bright"?1.35:S.tone==="warm"?.7:1;
+      const bright=(S.tone==="bright"?1.35:S.tone==="warm"?.7:1)*(INSTS[S.inst]||INSTS.violin).tone;
       v.lp.frequency.setTargetAtTime(Math.min(12000,f*(5+a*10)*bright),t,.03);
       v.ng.gain.setTargetAtTime(a*.022,t,.03);
       if(a>.02){if(!v.on)v.on=now;}else v.on=0;
@@ -505,6 +515,7 @@ function render(){
   seg("sTilt",[[6,"6°"],[10,"10°"],[15,"15°"]],"tiltDeg");
   seg("sInv",[[false,"끄기 (기본)"],[true,"켜기 (반대로)"]],"inv");
   seg("sDbl",[[1.15,"아주 좁게"],[1.35,"좁게"],[1.6,"보통"]],"dblW");
+  seg("sInst",[["violin","바이올린 (G D A E)"],["viola","비올라 (C G D A)"]],"inst");applyInst();
   seg("sSnap",[["free","자유롭게"],["semi","반음에 맞추기"],["scale","음계에 맞추기"]],"snap");
   seg("sOctCol",[[false,"끄기"],[true,"켜기"]],"octCol");
   {const box=document.getElementById("sSpan");box.innerHTML="";
